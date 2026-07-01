@@ -47,8 +47,37 @@ FirstClick, ürün fikirlerini gerçek kullanıcıya sunmadan önce test etmeyi 
 
 - **Daily Scrum**: Daily Scrum toplantılarının zamansal sebeplerden ötürü Slack / Whatsapp üzerinden yapılmasına karar verilmiştir. Daily Scrum toplantısı ekran görüntüleri veya logları aşağıda paylaşılmaktadır:
 
-- **Sprint Board Update**: Sprint Board ekran görüntüsü:
-  - ![Sprint Board](...) *(Miro/Jira board ekran görüntüsü linkini buraya ekleyin)*
+- **Sprint Board Update**: Miro Panomuzun güncel durumuna dair ekran görüntüsü aşağıda paylaşılacaktır. Panoda kullanılan kart renk kodları:
+  - 🔵 **Mavi Kartlar**: User Story (Kullanıcı Hikayesi)
+  - 🔴 **Kırmızı Kartlar**: Task (Yapılacak Teknik İş)
+
+  ### **Miro Panosu Kart Başlıkları (Sprint 1 Düzeni):**
+
+  | Kolon | Kart Türü & Başlığı | Açıklama |
+  | :--- | :--- | :--- |
+  | **Done** | 🔵 Story: Proje Kurulumu ve Tasarım Hazırlığı | Projenin genel hazırlık aşaması. |
+  | | 🔴 Task: Definition of Done (DoD) Tanımları | Proje tamamlanma kriterlerinin belirlenmesi. |
+  | | 🔴 Task: Git Reposu Entegrasyonu ve Ortam Ayarları | GitHub reposunun açılması, frontend & backend yapısının kurulması. |
+  | | 🔴 Task: Arayüz Eskizlerinin (Sketches) Çizilmesi | Figma veya kağıt üzerinde ön tasarımların yapılması. |
+  | | 🔴 Task: Landing Page Arayüz Kodlaması | Fikir girişinin yapılacağı ana sayfa tasarımı. |
+  | | 🔴 Task: Fikir Giriş Formunun Oluşturulması | Kullanıcının fikrini yazacağı form input'ları. |
+  | | 🔴 Task: Persona Seçim Ekranı Geliştirilmesi | Hedef kitle kartlarının arayüze eklenmesi. |
+  | **In Progress** | 🔵 Story: AI Persona Ajanları ve Temel Simülasyon | OpenAI entegrasyonu ve simülasyon mantığı. |
+  | | 🔴 Task: Persona Sistem Prompt'larının Hazırlanması | Farklı personalar için system prompt'larının yazılması. |
+  | **To Do** | 🔴 Task: FastAPI OpenAI API Entegrasyonu | Backend'in OpenAI API ile haberleştirilmesi. |
+  | | 🔴 Task: Simülasyon Rapor Ekranı Tasarımı | Sonuçların gösterileceği arayüzün tasarlanması. |
+  | | 🔴 Task: Yükleme (Loading) Ekranı ve Animasyon | Yapay zeka simülasyon yaparken gösterilecek animasyon. |
+  | | 🔴 Task: Rapor Sonuç Kartlarının Kodlanması | "Nerede takılır?", "Onboarding önerisi" alanlarının gösterilmesi. |
+  | | 🔴 Task: Simülasyon Veri Şeması (Pydantic Modelleri) | Gelen ve giden verinin tip kontrolü. |
+  | **Backlog** | 🔵 Story: Çoklu Ajan Simülasyonu (Multi-agent) | Personaların birbirleriyle tartışması özelliği. |
+  | | 🔵 Story: Ürün Ekran Görüntüsü / Prototip Yükleme | Görsel analiz yeteneği. |
+  | | 🔵 Story: Kullanıcı ve Analiz Geçmişi (Supabase) | Veri tabanı entegrasyonu. |
+  | | 🔴 Task: Supabase Auth Entegrasyonu | Kayıt ol / Giriş yap modülü. |
+  | | 🔴 Task: Geçmiş Analiz Raporlarının Listelenmesi | Rapor geçmişi arayüzü. |
+  | **Rejected** | 🔴 Task: Canlı Kullanıcı Test Modülü Entegrasyonu | Gerçek kullanıcı testi (Simülasyon odaklı olduğumuz için kapsam dışı). |
+  | | 🔴 Task: Selenium ile Tarayıcı Otomasyonu | Web otomasyonu (Prompt tabanlı analiz tercih edildi). |
+
+  - ![Sprint Board](...) *(Miro board ekran görüntünüzün linkini buraya ekleyin)*
 
 - **Ürün Durumu**: Sprint 1 sonunda geliştirilen çalışan ürün ekran görüntüleri / videoları:
   - ![Ürün Durumu](...) *(Sprint 1 sonundaki çalışan prototip/ürün ekran görüntüsü linkini buraya ekleyin)*
