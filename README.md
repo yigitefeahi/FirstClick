@@ -7,9 +7,9 @@ Grup 15
 
 ## 👥 **Takım Elemanları**
 
-| <img src="https://ui-avatars.com/api/?name=Yigit+Efe+Ahi&background=6366F1&color=fff&rounded=true" width="80px" height="80px" alt="Yiğit Efe AHİ"/> | <img src="https://ui-avatars.com/api/?name=Mehmet+Tat&background=EC4899&color=fff&rounded=true" width="80px" height="80px" alt="Mehmet TAT"/> | <img src="https://ui-avatars.com/api/?name=Hasibe+Akdogan&background=14B8A6&color=fff&rounded=true" width="80px" height="80px" alt="Hasibe AKDOĞAN"/> | <img src="https://ui-avatars.com/api/?name=Elif+Imil&background=F59E0B&color=fff&rounded=true" width="80px" height="80px" alt="Elif İMİL"/> | <img src="https://ui-avatars.com/api/?name=Sevdenur+Gokbulut&background=3B82F6&color=fff&rounded=true" width="80px" height="80px" alt="Sevdenur GÖKBULUT"/> |
+| [![Yiğit Efe AHİ](https://github.com/yigitefeahi.png?size=80)](https://github.com/yigitefeahi) | [![Mehmet TAT](https://github.com/mexmettat.png?size=80)](https://github.com/mexmettat) | [![Hasibe AKDOĞAN](https://github.com/github_username_hasibe.png?size=80)](https://github.com/github_username_hasibe) | [![Elif İMİL](https://github.com/github_username_elif.png?size=80)](https://github.com/github_username_elif) | [![Sevdenur GÖKBULUT](https://github.com/github_username_sevdenur.png?size=80)](https://github.com/github_username_sevdenur) |
 | :---: | :---: | :---: | :---: | :---: |
-| **Yiğit Efe AHİ** | **Mehmet TAT** | **Hasibe AKDOĞAN** | **Elif İMİL** | **Sevdenur GÖKBULUT** |
+| **[Yiğit Efe AHİ](https://github.com/yigitefeahi)** | **[Mehmet TAT](https://github.com/mexmettat)** | **[Hasibe AKDOĞAN](https://github.com/github_username_hasibe)** | **[Elif İMİL](https://github.com/github_username_elif)** | **[Sevdenur GÖKBULUT](https://github.com/github_username_sevdenur)** |
 | *Product Owner* | *Scrum Master* | *Developer* | *Developer* | *Developer* |
 
 ---
