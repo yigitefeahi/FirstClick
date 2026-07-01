@@ -1,13 +1,15 @@
-# **FirstClick** (Takım İsmi: FirstClick)
+# Takım İsmi
+- Grup 15
 
 # Ürün İle İlgili Bilgiler
 
 ## Takım Elemanları
 
-- **[Ad Soyad]**: Product Owner
-- **[Ad Soyad]**: Scrum Master
-- **[Ad Soyad]**: Developer
-- **[Ad Soyad]**: Developer
+- **[Yiğit Efe AHİ]**: Product Owner
+- **[Mehmet TAT]**: Scrum Master
+- **[Hasibe AKDOĞAN]**: Developer
+- **[Elif İMİL]**: Developer
+- **[Sevdenur GÖKBULUT]**: Developer
 
 ## Ürün İsmi
 
@@ -43,8 +45,7 @@ FirstClick, ürün fikirlerini gerçek kullanıcıya sunmadan önce test etmeyi 
   
   Story'ler yapılacak işlere (task'lere) bölünmüştür. Miro Board'da gözüken kırmızı item'lar yapılacak işleri (task) gösterirken, mavi item'lar story'leri temsil etmektedir.
 
-- **Daily Scrum**: Daily Scrum toplantılarının zamansal sebeplerden ötürü Slack / Discord üzerinden yapılmasına karar verilmiştir. Daily Scrum toplantısı ekran görüntüleri veya logları aşağıda paylaşılmaktadır:
-  - [Sprint 1 Daily Scrum Mesajları / Görselleri](...) *(Daily Scrum sohbet görüntünüzün linkini buraya ekleyin)*
+- **Daily Scrum**: Daily Scrum toplantılarının zamansal sebeplerden ötürü Slack / Whatsapp üzerinden yapılmasına karar verilmiştir. Daily Scrum toplantısı ekran görüntüleri veya logları aşağıda paylaşılmaktadır:
 
 - **Sprint Board Update**: Sprint Board ekran görüntüsü:
   - ![Sprint Board](...) *(Miro/Jira board ekran görüntüsü linkini buraya ekleyin)*
