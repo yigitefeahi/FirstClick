@@ -7,10 +7,13 @@ Grup 15
 
 ## 👥 **Takım Elemanları**
 
-| [![Yiğit Efe AHİ](https://github.com/yigitefeahi.png?size=80)](https://github.com/yigitefeahi) | [![Mehmet TAT](https://github.com/mexmettat.png?size=80)](https://github.com/mexmettat) | [![Hasibe AKDOĞAN](https://github.com/github_username_hasibe.png?size=80)](https://github.com/github_username_hasibe) | [![Elif İMİL](https://github.com/github_username_elif.png?size=80)](https://github.com/github_username_elif) | [![Sevdenur GÖKBULUT](https://github.com/github_username_sevdenur.png?size=80)](https://github.com/github_username_sevdenur) |
-| :---: | :---: | :---: | :---: | :---: |
-| **[Yiğit Efe AHİ](https://github.com/yigitefeahi)** | **[Mehmet TAT](https://github.com/mexmettat)** | **[Hasibe AKDOĞAN](https://github.com/github_username_hasibe)** | **[Elif İMİL](https://github.com/github_username_elif)** | **[Sevdenur GÖKBULUT](https://github.com/github_username_sevdenur)** |
-| *Product Owner* | *Scrum Master* | *Developer* | *Developer* | *Developer* |
+| Profil | İsim | Rol | GitHub |
+| :---: | :--- | :--- | :--- |
+| <img src="https://github.com/yigitefeahi.png" width="50" height="50" style="border-radius: 50%;"/> | **Yiğit Efe AHİ** | Product Owner | [🔗 @yigitefeahi](https://github.com/yigitefeahi) |
+| <img src="https://github.com/mexmettat.png" width="50" height="50" style="border-radius: 50%;"/> | **Mehmet TAT** | Scrum Master | [🔗 @mexmettat](https://github.com/mexmettat) |
+| <img src="https://github.com/github_username_hasibe.png" width="50" height="50" style="border-radius: 50%;"/> | **Hasibe AKDOĞAN** | Developer | [🔗 @github_username_hasibe](https://github.com/github_username_hasibe) |
+| <img src="https://github.com/github_username_elif.png" width="50" height="50" style="border-radius: 50%;"/> | **Elif İMİL** | Developer | [🔗 @github_username_elif](https://github.com/github_username_elif) |
+| <img src="https://github.com/github_username_sevdenur.png" width="50" height="50" style="border-radius: 50%;"/> | **Sevdenur GÖKBULUT** | Developer | [🔗 @github_username_sevdenur](https://github.com/github_username_sevdenur) |
 
 ---
 
