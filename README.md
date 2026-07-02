@@ -80,13 +80,18 @@ Grup 15
   - **Toplam Backlog Puanı**: **100 SP**
 
   ### **Miro Sprint Board Görünümü:**
-  - ![Sprint Board](screenshoots/sprint1.jpg)
+ ![Sprint Board](screenshoots/sprint1.jpg)
 
 - **Ürün Durumu**: Sprint 1 sonunda geliştirilen çalışan ürün ekran görüntüleri:
 
-  | Giriş Ekranı (Landing Page) | Analiz Ekranı (Analyze) | Sonuç Ekranı (Results) |
-  | :---: | :---: | :---: |
-  | ![Giriş Ekranı](screenshoots/sp1app0.jpg) | ![Analiz Ekranı](screenshoots/sp1app1.jpg) | ![Sonuç Ekranı](screenshoots/sp1app2.jpg) |
+  #### 🔍 Giriş Ekranı (Landing Page)
+  ![Giriş Ekranı](screenshoots/sp1app0.jpg)
+
+  #### 📊 Analiz Ekranı (Analyze)
+  ![Analiz Ekranı](screenshoots/sp1app1.jpg)
+
+  #### 📈 Sonuç Ekranı (Results)
+  ![Sonuç Ekranı](screenshoots/sp1app2.jpg)
 
 
 - **Sprint Review**:
