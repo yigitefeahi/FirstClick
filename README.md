@@ -9,8 +9,8 @@ Grup 15
 
 | Profil | İsim | Rol | GitHub |
 | :---: | :--- | :--- | :--- |
-| <img src="https://github.com/yigitefeahi.png" width="50" height="50" style="border-radius: 50%;"/> | **Yiğit Efe AHİ** | Product Owner | [🔗 @yigitefeahi](https://github.com/yigitefeahi) |
-| <img src="https://github.com/mexmettat.png" width="50" height="50" style="border-radius: 50%;"/> | **Mehmet TAT** | Scrum Master | [🔗 @mexmettat](https://github.com/mexmettat) |
+| <img src="https://github.com/yigitefeahi.png" width="50" height="50" style="border-radius: 50%;"/> | **Yiğit Efe AHİ** | Scrum Master | [🔗 @yigitefeahi](https://github.com/yigitefeahi) |
+| <img src="https://github.com/mexmettat.png" width="50" height="50" style="border-radius: 50%;"/> | **Mehmet TAT** | Product Owner | [🔗 @mexmettat](https://github.com/mexmettat) |
 | <img src="https://github.com/github_username_hasibe.png" width="50" height="50" style="border-radius: 50%;"/> | **Hasibe AKDOĞAN** | Developer | [🔗 @github_username_hasibe](https://github.com/github_username_hasibe) |
 | <img src="https://github.com/github_username_elif.png" width="50" height="50" style="border-radius: 50%;"/> | **Elif İMİL** | Developer | [🔗 @github_username_elif](https://github.com/github_username_elif) |
 | <img src="https://github.com/Sevdenurgokbulut.png" width="50" height="50" style="border-radius: 50%;"/> | **Sevdenur GÖKBULUT** | Developer | [🔗 @Sevdenurgokbulut](https://github.com/Sevdenurgokbulut) |
@@ -82,8 +82,12 @@ Grup 15
   ### **Miro Sprint Board Görünümü:**
   - ![Sprint Board](screenshoots/sprint1.jpg)
 
-- **Ürün Durumu**: Sprint 1 sonunda geliştirilen çalışan ürün ekran görüntüleri / videoları:
-  - ![Ürün Durumu](...) *(Sprint 1 sonundaki çalışan prototip/ürün ekran görüntüsü linkini buraya ekleyin)*
+- **Ürün Durumu**: Sprint 1 sonunda geliştirilen çalışan ürün ekran görüntüleri:
+
+  | Giriş Ekranı (Landing Page) | Analiz Ekranı (Analyze) | Sonuç Ekranı (Results) |
+  | :---: | :---: | :---: |
+  | ![Giriş Ekranı](screenshoots/sp1app0.jpg) | ![Analiz Ekranı](screenshoots/sp1app1.jpg) | ![Sonuç Ekranı](screenshoots/sp1app2.jpg) |
+
 
 - **Sprint Review**:
   - **Katılımcılar**: Bütün takım üyeleri.
