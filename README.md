@@ -9,11 +9,11 @@ Grup 15
 
 | Profil | İsim | Rol | GitHub |
 | :---: | :--- | :--- | :--- |
-| <img src="https://github.com/yigitefeahi.png" width="50" height="50" style="border-radius: 50%;"/> | **Yiğit Efe AHİ** | Scrum Master | [🔗 @yigitefeahi](https://github.com/yigitefeahi) |
-| <img src="https://github.com/mexmettat.png" width="50" height="50" style="border-radius: 50%;"/> | **Mehmet TAT** | Product Owner | [🔗 @mexmettat](https://github.com/mexmettat) |
-| <img src="https://github.com/hasibeakdogan.png" width="50" height="50" style="border-radius: 50%;"/> | **Hasibe AKDOĞAN** | Developer | [🔗 @hasibeakdogan](https://github.com/hasibeakdogan) |
-| <img src="https://github.com/elim834.png" width="50" height="50" style="border-radius: 50%;"/> | **Elif İMİL** | Developer | [🔗 @elim834](https://github.com/elim834) |
-| <img src="https://github.com/Sevdenurgokbulut.png" width="50" height="50" style="border-radius: 50%;"/> | **Sevdenur GÖKBULUT** | Developer | [🔗 @Sevdenurgokbulut](https://github.com/Sevdenurgokbulut) |
+| <img src="https://github.com/yigitefeahi.png" width="50" height="50" style="border-radius: 50%;"/> | **Yiğit Efe AHİ** | Scrum Master | [@yigitefeahi](https://github.com/yigitefeahi) |
+| <img src="https://github.com/mexmettat.png" width="50" height="50" style="border-radius: 50%;"/> | **Mehmet TAT** | Product Owner | [@mexmettat](https://github.com/mexmettat) |
+| <img src="https://github.com/hasibeakdogan.png" width="50" height="50" style="border-radius: 50%;"/> | **Hasibe AKDOĞAN** | Developer | [@hasibeakdogan](https://github.com/hasibeakdogan) |
+| <img src="https://github.com/elim834.png" width="50" height="50" style="border-radius: 50%;"/> | **Elif İMİL** | Developer | [@elim834](https://github.com/elim834) |
+| <img src="https://github.com/Sevdenurgokbulut.png" width="50" height="50" style="border-radius: 50%;"/> | **Sevdenur GÖKBULUT** | Developer | [@Sevdenurgokbulut](https://github.com/Sevdenurgokbulut) |
 
 ---
 
