@@ -265,8 +265,10 @@ types/         # TypeScript tipleri
 
 ## Gelecek Geliştirmeler
 
-- Multi-agent persona sistemi (backend servis katmanında)
-- Supabase ile kullanıcı ve analiz geçmişi
-- Analiz versiyon karşılaştırma
-- Prototip / ekran görüntüsü yükleme
+- Supabase ile kullanıcı hesap girişi (Auth) ve analiz geçmişi (Database)
+- RAG (Retrieval-Augmented Generation) ile ürün kullanım kılavuzu/dokümanı desteği
+- Özelleştirilebilir / kullanıcı tanımlı yeni persona ekleme sistemi
+- Ürün ekran görüntüsü / prototip yükleme ve görsel analiz desteği
+- Analiz versiyonlarını karşılaştırma arayüzü
+
 
