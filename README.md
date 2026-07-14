@@ -152,8 +152,7 @@ Grup 15
   - 🔵 **RAG (Retrieval-Augmented Generation) Entegrasyonu**: **25 SP** *(Backlog - Sprint 3)*
 
   ### **Miro Sprint Board Görünümü:**
-  <!-- Sprint 2 Miro Board Ekran Görüntüsü Buraya Eklenecek -->
-  <!-- Örnek: ![Sprint 2 Board](screenshoots/sprint2.jpg) -->
+  ![Sprint 2 Board](screenshoots/sprint2.jpeg)
 
 - **Ürün Durumu**: Sprint 2 kapsamında geliştirilen ve güncellenen çalışan ürün ekran görüntüleri bu alanda paylaşılacaktır:
 
