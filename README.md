@@ -227,12 +227,18 @@ make install
 ```
 
 ### Backend Ortam Değişkenleri
-`backend/.env` dosyasını oluşturun (`backend/.env.example` dosyasını referans alabilirsiniz):
+`backend/.env` dosyasını oluşturun (`backend/.env.example` referans):
 
 ```bash
 OPENAI_API_KEY=sk-...
 OPENAI_MODEL=gpt-4o-mini
+OPENAI_SYNTHESIS_MODEL=gpt-4o
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=...
+SUPABASE_JWT_SECRET=...
+SUPABASE_STORAGE_BUCKET=product-docs
 ```
 
 ### Frontend Ortam Değişkenleri
@@ -240,7 +246,12 @@ CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 
 ```bash
 NEXT_PUBLIC_API_BASE=http://127.0.0.1:8000
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 ```
+
+Supabase SQL migration: `supabase/migrations/001_init.sql`  
+Deploy (Render): [DEPLOY.md](DEPLOY.md)
 
 ### Projeyi Çalıştırma
 İki ayrı terminal açarak aşağıdaki komutları çalıştırın:
@@ -249,6 +260,9 @@ NEXT_PUBLIC_API_BASE=http://127.0.0.1:8000
 make run-backend   # http://127.0.0.1:8000 adresinde çalışır
 make run-frontend  # http://localhost:3000 adresinde çalışır
 ```
+
+Giriş: `/login` · Kayıt: `/signup` · Geçmiş: `/history`  
+Analiz için giriş zorunludur. Doküman (PDF/MD/TXT) yükleyerek hibrit RAG (doküman + geçmiş analiz) aktif edilir.
 
 API dokümantasyonuna [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) adresinden erişebilirsiniz.
 
