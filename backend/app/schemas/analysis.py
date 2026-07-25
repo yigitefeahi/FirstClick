@@ -11,6 +11,7 @@ class AnalysisFormData(BaseModel):
     differentiator: str = Field(default="", alias="differentiator")
     selected_personas: list[str] = Field(..., alias="selectedPersonas", min_length=1)
     product_id: str | None = Field(default=None, alias="productId")
+    locale: Literal["tr", "en"] = "tr"
 
     model_config = {"populate_by_name": True, "ser_json_by_alias": True}
 
@@ -28,7 +29,7 @@ class PersonaAnalysis(BaseModel):
     first_impression: str = Field(..., alias="firstImpression")
     understood: str
     confusion: str
-    likelihood: Literal["Yüksek", "Orta", "Düşük"]
+    likelihood: Literal["Yüksek", "Orta", "Düşük", "High", "Medium", "Low"]
     drop_off_reason: str = Field(..., alias="dropOffReason")
     suggestion: str
     citations: list[str] = Field(default_factory=list)
@@ -60,6 +61,7 @@ class RagSource(BaseModel):
     scope: str | None = None
     title: str | None = None
     category: str | None = None
+    score: float | None = None
 
     model_config = {"populate_by_name": True, "ser_json_by_alias": True}
 
@@ -146,6 +148,7 @@ class AnalysisDetail(BaseModel):
 class CompareRequest(BaseModel):
     before_id: str = Field(..., alias="beforeId")
     after_id: str = Field(..., alias="afterId")
+    locale: Literal["tr", "en"] = "tr"
 
     model_config = {"populate_by_name": True, "ser_json_by_alias": True}
 
@@ -187,6 +190,7 @@ class FollowupRequest(BaseModel):
     product_description: str = Field(default="", alias="productDescription")
     prior_persona: dict | None = Field(default=None, alias="priorPersona")
     history: list[FollowupTurn] = Field(default_factory=list)
+    locale: Literal["tr", "en"] = "tr"
 
     model_config = {"populate_by_name": True, "ser_json_by_alias": True}
 
@@ -281,6 +285,7 @@ class AbAnalyzeRequest(BaseModel):
     pitch_b: str = Field(..., alias="pitchB", min_length=10)
     label_a: str = Field(default="Pitch A", alias="labelA")
     label_b: str = Field(default="Pitch B", alias="labelB")
+    locale: Literal["tr", "en"] = "tr"
 
     model_config = {"populate_by_name": True, "ser_json_by_alias": True}
 

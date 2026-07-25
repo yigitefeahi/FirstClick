@@ -10,9 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/lib/supabase/auth-context";
+import { useT } from "@/lib/i18n/preferences-context";
 
 export default function ForgotPasswordPage() {
   const { resetPassword, configured } = useAuth();
+  const t = useT();
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -29,25 +31,25 @@ export default function ForgotPasswordPage() {
       setError(err);
       return;
     }
-    setMessage("Şifre sıfırlama linki e-postanıza gönderildi (Supabase ayarına bağlı).");
+    setMessage(t("auth.forgotSuccess"));
   }
 
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
       <main className="flex flex-1 items-center justify-center px-4 py-16">
-        <Card className="w-full max-w-md">
+        <Card className="w-full max-w-md dark:border-white/10 dark:bg-surface">
           <CardHeader>
-            <CardTitle>Şifremi unuttum</CardTitle>
-            <CardDescription>E-posta adresinize sıfırlama linki gönderilir.</CardDescription>
+            <CardTitle className="dark:text-white">{t("auth.forgotTitle")}</CardTitle>
+            <CardDescription className="dark:text-slate-400">{t("auth.forgotDesc")}</CardDescription>
           </CardHeader>
           <CardContent>
             {!configured ? (
-              <p className="text-sm text-amber-800">Supabase yapılandırılmamış.</p>
+              <p className="text-sm text-amber-800 dark:text-amber-200">{t("auth.supabaseMissing")}</p>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">E-posta</Label>
+                  <Label htmlFor="email">{t("auth.email")}</Label>
                   <Input
                     id="email"
                     type="email"
@@ -56,15 +58,15 @@ export default function ForgotPasswordPage() {
                     onChange={(e) => setEmail(e.target.value)}
                   />
                 </div>
-                {error && <p className="text-sm text-red-600">{error}</p>}
-                {message && <p className="text-sm text-brand-700">{message}</p>}
+                {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+                {message && <p className="text-sm text-brand-700 dark:text-brand-400">{message}</p>}
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  Link gönder
+                  {t("auth.forgotSubmit")}
                 </Button>
-                <p className="text-center text-sm text-slate-500">
-                  <Link href="/login" className="text-brand-700">
-                    Girişe dön
+                <p className="text-center text-sm text-slate-500 dark:text-slate-400">
+                  <Link href="/login" className="text-brand-700 dark:text-brand-400">
+                    {t("auth.forgotBackLogin")}
                   </Link>
                 </p>
               </form>

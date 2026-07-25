@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: "class",
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -24,12 +25,13 @@ const config: Config = {
           900: "#134e4a",
         },
         lab: {
-          ink: "#0c1222",
-          mist: "#e8eef4",
-          steel: "#94a3b8",
-          chalk: "#f4f7fa",
-          signal: "#c8f542",
+          ink: "var(--lab-ink)",
+          mist: "var(--lab-mist)",
+          steel: "var(--lab-steel)",
+          chalk: "var(--lab-chalk)",
+          signal: "var(--lab-signal)",
         },
+        surface: "var(--surface)",
       },
       fontFamily: {
         display: ["var(--font-display)", "system-ui", "sans-serif"],

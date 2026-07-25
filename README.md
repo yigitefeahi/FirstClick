@@ -200,101 +200,6 @@ Grup 15
 
 ---
 
-# Sprint 3
-
-- **Backlog Düzeni ve Story Seçimleri**: Sprint 3 kapsamında, projenin güvenlik, veritabanı kalıcılığı, döküman bazlı RAG motoru entegrasyonu ve gelişmiş analiz özellikleri tamamlanmıştır. İşler kullanıcı hikayelerine (User Story - Mavi Kartlar) ve bunlara bağlı teknik görevlere (Task - Kırmızı Kartlar) bölünmüş; Miro üzerinde planlanan hedeflere sadık kalınmıştır.
-
-- **Daily Scrum**: Daily Scrum toplantıları Slack ve Whatsapp üzerinden yürütülmüş, ekip üyeleri her gün saat 11:00'e kadar ilerlemelerini ve olası engellerini paylaşmıştır. Ekran görüntüleri aşağıdaki alanlara eklenecektir:
-
-  <p align="center">
-    <img src="screenshoots/sp3m1.jpg" width="32%" />
-    <img src="screenshoots/sp3m2.jpg" width="32%" />
-    <img src="screenshoots/sp3m3.jpg" width="32%" />
-  </p>
-
-- **Sprint Board Update**: Miro panomuzda Sprint 3 hedefleri doğrultusunda kartların son durumu güncellenmiş ve backlog tamamlanmıştır.
-  - 🔵 **Mavi Kartlar**: User Story (Kullanıcı Hikayesi)
-  - 🔴 **Kırmızı Kartlar**: Task (Yapılacak Teknik İş)
-
-  ### **Story Point (SP) Dağılımı ve Değerlendirme:**
-  Sprint 3'te projenin ana fazını bitirmek üzere 100 SP'lik nihai iş planlaması gerçekleştirilmiştir:
-  - 🔵 **Kullanıcı ve Analiz Geçmişi (Supabase & Auth)**: **20 SP** *(Done)*
-  - 🔵 **RAG (Retrieval-Augmented Generation) Entegrasyonu**: **25 SP** *(Done)*
-  - 🔵 **Özelleştirilebilir/Kullanıcı Tanımlı Persona Yönetimi**: **15 SP** *(Done)*
-  - 🔵 **A/B Test Analiz Karşılaştırma Arayüzü**: **15 SP** *(Done)*
-  - 🔵 **TTS Sesli Okuma Entegrasyonu & Paylaşım Özelliği**: **15 SP** *(Done)*
-  - 🔵 **Belge/Doküman Yönetim Sistemi & Workspace Mimarisi**: **10 SP** *(Done)*
-  - **Toplam Backlog Puanı**: **100 SP**
-
-  ### **Miro Sprint Board Görünümü:**
-  ![Sprint 3 Board](screenshoots/sprint3.jpeg)
-
-- **Ürün Durumu**: Sprint 3 kapsamında geliştirilen ve kullanıma sunulan çalışan ürün ekran görüntüleri:
-
-  #### 🔍 Yenilenen Giriş ve Tanıtım Ekranı (Landing Page)
-  <p align="center">
-    <img src="screenshoots/sp3app1.jpg" width="48%" />
-    <img src="screenshoots/sp3app2jpg.jpg" width="48%" />
-  </p>
-
-  #### 🔐 Giriş / Kayıt Arayüzü ve Analiz Geçmişi
-  <p align="center">
-    <img src="screenshoots/sp3app3.jpg" width="32%" />
-    <img src="screenshoots/sp3app4.jpg" width="32%" />
-    <img src="screenshoots/sp3app13.jpg" width="32%" />
-  </p>
-
-  #### 📚 Ürün Tanımlama, Doküman Yükleme & Hibrit RAG Yönetimi
-  <p align="center">
-    <img src="screenshoots/sp3app5.jpg" width="32%" />
-    <img src="screenshoots/sp3app6.jpg" width="32%" />
-    <img src="screenshoots/sp3app7.jpg" width="32%" />
-  </p>
-
-  #### 📊 Raporlama Ekranı, Detay Analizler & Çok Turlu Soru-Cevap
-  <p align="center">
-    <img src="screenshoots/sp3app8jpg.jpg" width="32%" />
-    <img src="screenshoots/sp3app9.jpg" width="32%" />
-    <img src="screenshoots/sp3app10.jpg" width="32%" />
-  </p>
-
-  #### 🎙️ Canlı 3D Avatar Odası (TalkingHead Persona)
-  <p align="center">
-    <img src="screenshoots/sp3app11.jpg" width="60%" />
-  </p>
-
-  #### ⚖️ Karşılaştırma Laboratuvarı & A/B Pitch Karşılaştırma Testi
-  <p align="center">
-    <img src="screenshoots/sp3app12.jpg" width="48%" />
-    <img src="screenshoots/sp3app14.jpg" width="48%" />
-  </p>
-
-  #### 🏢 Çalışma Alanı (Workspace) & Takım Yönetimi
-  <p align="center">
-    <img src="screenshoots/sp3app15.jpg" width="60%" />
-  </p>
-
-- **Sprint Review**:
-  - **Katılımcılar**: Bütün takım üyeleri.
-  - **Sunulan Özellikler**: Supabase Authentication, analiz geçmişi veritabanı, RAG motoru (PDF/MD/TXT desteği), özelleştirilebilir persona ekleme/çıkarma, A/B testi analiz karşılaştırma arayüzü, TTS sesli persona sentezi ve analiz paylaşım linkleri.
-  - **Geri Bildirimler**: Ürün sahibi ve paydaşlar, yapay zeka ajanlarının ürün dokümanlarını (RAG) kullanarak çok daha spesifik ve uydurma olmayan geri bildirimler vermesini oldukça başarılı buldu. A/B test karşılaştırma özelliği ise ürün geliştirme ekiplerinin iterasyonlarını ölçümlemesi için kritik bir katma değer olarak değerlendirildi.
-  - **Kararlar**: Proje başarıyla MVP (Minimum Viable Product) aşamasından tam kapsamlı bir analiz platformuna taşınmış ve canlıya alınmaya hazır hale getirilmiştir.
-
-- **Sprint Retrospective**:
-  - **Neler İyi Gitti?**:
-    - Supabase Auth ve RAG altyapısı beklenenden hızlı kuruldu; veritabanı şema tasarımı önceden netleştirildiği için backend ve frontend entegrasyonu pürüzsüz ilerledi.
-    - Ajan simülasyonlarında OpenAI'ın paralel çağrılması sayesinde analiz süreleri optimize edildi.
-    - TTS seslendirme özelliği simüle edilmiş kullanıcıların iç sesini dinleme deneyimini zenginleştirdi.
-  - **Neler Geliştirilebilir?**:
-    - RAG retrieval aşamasındaki embedding çıkarma maliyetleri ve token limitleri için daha sıkı korumalar/cache katmanları eklenebilirdi.
-    - Büyük PDF belgelerinin ayrıştırılması ve indekslenmesi sırasında yaşanan gecikmeler için bir arka plan kuyruk yapısı (Celery/Redis vb.) kurulması gelecekte düşünülebilir.
-  - **Aksiyon Planları**:
-    - Canlıya alım sonrasında veritabanı sorguları ve vektör aramaları için index optimizasyonları yapılacak.
-    - API token harcamalarını izlemek ve bütçe aşımını önlemek için bir kullanım limiti/kota kontrol sistemi kurulacak.
-
-
----
-
 # Teknik Kurulum ve Mimari
 
 > [!NOTE]
@@ -312,54 +217,6 @@ Frontend yalnızca UI sunar. Tüm analiz mantığı, OpenAI entegrasyonu ve mock
 ```
 Frontend (Next.js)  ──POST──▶  Backend (FastAPI)  ──▶  OpenAI / Mock
      :3000                         :8000
-```
-
-### Ajan Orkestrasyonu İşleyiş Şeması
-
-FirstClick platformunda çalışan çoklu ajan simülasyonu ve hibrit RAG akışının zaman diyagramı aşağıda gösterilmiştir:
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User as Kullanıcı (Next.js UI)
-    participant API as FastAPI Backend
-    participant DB as Supabase DB & Auth
-    participant RAG as RAG Arama Motoru
-    participant LLM as OpenAI (GPT Modelleri)
-
-    User->>API: Analiz Başlat Talebi (POST /api/v1/analyze)
-    Note over API: Kullanıcı Yetkisi Doğrulanır (JWT check)
-    
-    Note over API, DB: Adım 1: Özel Persona ve RAG Hazırlığı
-    API->>DB: Özel Personaları Getir (Select custom_personas)
-    DB-->>API: Özel Persona Detayları
-    
-    API->>LLM: Ürün Detayları Embedding Üret (text-embedding-3-small)
-    LLM-->>API: Vektör Temsili (Embedding Vector)
-    
-    API->>DB: RPC match_chunks() çağrısı (Vektör + Anahtar Kelime)
-    DB-->>API: Eşleşen Belge Parçaları (RAG Chunks - doc, web, past, kb)
-    API->>API: RRF (Reciprocal Rank Fusion) ile sırala & Diversify et
-
-    Note over API, LLM: Adım 2: Paralel Çoklu Ajan Simülasyonu
-    par Her bir Persona Ajanı için (gpt-4o-mini)
-        API->>LLM: Karakter & RAG Bağlamı ile Sorgu Gönder
-        LLM-->>API: Persona Simülasyon Yanıtı (Persona JSON)
-        API-->>User: Progress Event: "Persona Done" (SSE/Stream)
-    end
-
-    Note over API, LLM: Adım 3: Sentezleme ve Sonuç Üretimi
-    API->>LLM: Sentez Ajanı Sorgusu (gpt-4o + Tüm Persona Raporları)
-    LLM-->>API: Sentez Raporu (Synthesis JSON)
-    API-->>User: Progress Event: "Synthesis Done" (SSE/Stream)
-
-    Note over API, DB: Adım 4: Kalıcı Depolama ve RAG İndeksleme
-    API->>DB: Analiz Sonucunu Kaydet (Insert analyses)
-    DB-->>API: Başarılı (ID döner)
-    API->>DB: Analizi RAG Vektör İndeksine Ekle (ingest_analysis_result)
-    DB-->>API: Başarılı
-
-    API-->>User: Tamamlandı Yanıtı (Complete JSON Payload)
 ```
 
 ## Kurulum ve Çalıştırma
@@ -442,9 +299,10 @@ types/         # TypeScript tipleri
 
 ## Gelecek Geliştirmeler
 
-- **Vision LLM Ajanları (Multimodal):** Ürün ekran görüntüsü, mockup veya doğrudan Figma tasarımlarını görsel olarak tarayıp analiz edebilecek tasarım ajanlarının entegrasyonu.
-- **Chrome Extension / Widget Desteği:** Kullanıcıların FirstClick panelinden çıkmadan, kendi canlı web siteleri veya prototipleri üzerinde ajanları çalıştırabileceği bir tarayıcı eklentisi.
-- **Gelişmiş Caching & API Limit Kontrolü:** Tekrarlanan analiz adımları için Redis cache katmanı eklenmesi ve kurumsal müşteriler için API kullanım kota/bütçe yönetim paneli.
-- **Detaylı Demografik Veri Entegrasyonu:** Özel personalar oluştururken hedeflenen lokasyon, yaş ve meslek gruplarına uygun hazır davranış profili modellerinin (demographic presets) sisteme dahil edilmesi.
+- Supabase ile kullanıcı hesap girişi (Auth) ve analiz geçmişi (Database)
+- RAG (Retrieval-Augmented Generation) ile ürün kullanım kılavuzu/dokümanı desteği
+- Özelleştirilebilir / kullanıcı tanımlı yeni persona ekleme sistemi
+- Ürün ekran görüntüsü / prototip yükleme ve görsel analiz desteği
+- Analiz versiyonlarını karşılaştırma arayüzü
 
 

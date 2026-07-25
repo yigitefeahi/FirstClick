@@ -1,3 +1,5 @@
+import { formatSpeechRecognitionError } from "@/lib/presence/request-media-access";
+
 type SpeechResultEventLike = {
   results: ArrayLike<ArrayLike<{ transcript?: string }>>;
 };
@@ -24,6 +26,8 @@ export type SpeechEndDetectorOptions = {
   silenceMs?: number;
   minChars?: number;
   lang?: string;
+  /** Used for localized SpeechRecognition error messages. */
+  locale?: "tr" | "en";
   requireConfirmation?: boolean;
 };
 
@@ -111,7 +115,7 @@ export function createSpeechEndDetector(options: SpeechEndDetectorOptions): Spee
 
     recognition.onerror = (event) => {
       if (event.error === "no-speech" || event.error === "aborted") return;
-      options.onError?.(`Mikrofon hatası: ${event.error || "bilinmiyor"}`);
+      options.onError?.(formatSpeechRecognitionError(event.error, options.locale ?? "tr"));
     };
 
     recognition.onend = () => {

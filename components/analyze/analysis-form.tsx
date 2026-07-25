@@ -11,7 +11,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { HealthBanner } from "@/components/analyze/health-banner";
 import {
   OrchestrationPanel,
+  type OrchestrationActive,
   type OrchestrationLogItem,
+  type OrchestrationPersonaProgress,
 } from "@/components/analyze/orchestration-panel";
 import { DEFAULT_PERSONA_IDS, PERSONA_OPTIONS, STORAGE_KEYS } from "@/lib/constants";
 import { PERSONA_PACKS } from "@/lib/persona-packs";
@@ -34,80 +36,133 @@ import {
 import type { AnalysisFormData } from "@/types/analysis";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/supabase/auth-context";
-
-const STEPS = [
-  { id: 1, label: "Ürün" },
-  { id: 2, label: "Kaynaklar" },
-  { id: 3, label: "Personalar" },
-] as const;
-
-const SAMPLE_FORM: AnalysisFormData = {
-  productName: "TaskFlow",
-  productDescription:
-    "Küçük ekipler için görev ve sprint yönetimi. Tek ekranda backlog, öncelik ve günlük check-in.",
-  targetAudience: "5–20 kişilik startup ekipleri, remote çalışan PM’ler",
-  coreFeatures: "Kanban panosu, tek tıkla sprint, Slack bildirimleri, ücretsiz 14 gün deneme",
-  differentiator: "Kurulum 2 dakikada bitiyor; Jira kadar ağır değil, Notion kadar dağınık değil",
-  selectedPersonas: [...DEFAULT_PERSONA_IDS],
-  productId: null,
-};
+import {
+  localizedPersonaDescription,
+  localizedPersonaLabel,
+  personaPackDescriptionKey,
+} from "@/lib/i18n/persona-labels";
+import { usePreferences, useT } from "@/lib/i18n/preferences-context";
 
 function pushLog(
   setter: React.Dispatch<React.SetStateAction<OrchestrationLogItem[]>>,
-  message: string,
-  tone: OrchestrationLogItem["tone"] = "default"
+  item: Omit<OrchestrationLogItem, "id">
 ) {
-  setter((prev) => [...prev, { id: `${Date.now()}-${prev.length}`, message, tone }]);
+  setter((prev) => [...prev, { ...item, id: `${Date.now()}-${prev.length}` }]);
+}
+
+const STAGE_TEXT_KEYS: Record<"scanning" | "simulating", string> = {
+  scanning: "analyze.form.orchestration.scanning",
+  simulating: "analyze.form.orchestration.simulating",
+};
+
+/**
+ * Map stream stage → dictionary key. Never return BE `message` for display —
+ * prior bug preferred Turkish human strings over t().
+ */
+function stageTextKey(event: { key?: string; message?: string }): string {
+  if (event.key === "scanning" || event.key === "simulating") {
+    return STAGE_TEXT_KEYS[event.key];
+  }
+  const n = (event.message ?? "").toLowerCase();
+  if (n.includes("taran") || n.includes("scanning") || n.includes("source")) {
+    return STAGE_TEXT_KEYS.scanning;
+  }
+  if (n.includes("simüle") || n.includes("simul") || n.includes("persona")) {
+    return STAGE_TEXT_KEYS.simulating;
+  }
+  return "orchestration.running";
 }
 
 function handleOrchestrationEvent(
   event: OrchestrationEvent,
   setters: {
-    setOrchestrationMessage: (msg: string) => void;
+    setOrchestrationActive: (msg: OrchestrationActive | null) => void;
     setOrchestrationLogs: React.Dispatch<React.SetStateAction<OrchestrationLogItem[]>>;
-    setPersonaProgress: (p: { index: number; total: number; name: string } | null) => void;
+    setPersonaProgress: (p: OrchestrationPersonaProgress | null) => void;
   }
 ) {
-  const { setOrchestrationMessage, setOrchestrationLogs, setPersonaProgress } = setters;
+  const { setOrchestrationActive, setOrchestrationLogs, setPersonaProgress } = setters;
   switch (event.type) {
-    case "stage":
-      setOrchestrationMessage(event.message);
-      pushLog(setOrchestrationLogs, event.message);
+    case "stage": {
+      const textKey = stageTextKey(event);
+      setOrchestrationActive({ textKey });
+      pushLog(setOrchestrationLogs, { textKey });
       break;
+    }
     case "rag":
-      setOrchestrationMessage(
-        event.count > 0
-          ? `RAG: ${event.count} kaynak çekildi`
-          : "RAG: ürün corpus'u boş, genel bilgi bankası kullanılıyor"
-      );
-      if (event.titles.length > 0) {
-        pushLog(setOrchestrationLogs, `RAG: ${event.titles.slice(0, 4).join(", ")}`, "rag");
+      if (event.count > 0) {
+        setOrchestrationActive({
+          textKey: "analyze.form.orchestration.ragFetched",
+          params: { count: event.count },
+        });
+        const titles = event.titles ?? [];
+        const slugs = event.slugs ?? [];
+        if (titles.length > 0 || slugs.length > 0) {
+          pushLog(setOrchestrationLogs, {
+            textKey: "analyze.form.orchestration.ragTitles",
+            ragTitles: titles.slice(0, 4),
+            ragSlugs: slugs.slice(0, 4),
+            tone: "rag",
+          });
+        } else {
+          pushLog(setOrchestrationLogs, {
+            textKey: "analyze.form.orchestration.ragFetched",
+            params: { count: event.count },
+            tone: "rag",
+          });
+        }
       } else {
-        pushLog(setOrchestrationLogs, "RAG: global bilgi bankası hazır", "rag");
+        setOrchestrationActive({ textKey: "analyze.form.orchestration.ragEmpty" });
+        pushLog(setOrchestrationLogs, {
+          textKey: "analyze.form.orchestration.ragNone",
+          tone: "rag",
+        });
       }
       break;
-    case "persona":
+    case "persona": {
       if (event.status === "running") {
-        setPersonaProgress({ index: event.index, total: event.total, name: event.name });
-        setOrchestrationMessage(`Persona ${event.index}/${event.total} simüle ediliyor…`);
-        pushLog(setOrchestrationLogs, `Persona ${event.index}/${event.total}: ${event.name}`, "persona");
+        setPersonaProgress({
+          index: event.index,
+          total: event.total,
+          personaId: event.personaId,
+          fallbackName: event.name,
+        });
+        setOrchestrationActive({
+          textKey: "analyze.form.orchestration.personaRunning",
+          params: { index: event.index, total: event.total },
+        });
+        pushLog(setOrchestrationLogs, {
+          textKey: "analyze.form.orchestration.personaLog",
+          params: { index: event.index, total: event.total },
+          personaId: event.personaId,
+          fallbackName: event.name,
+          tone: "persona",
+        });
       } else {
-        pushLog(
-          setOrchestrationLogs,
-          event.ok === false
-            ? `Persona ${event.index}: yanıt alınamadı`
-            : `Persona ${event.index}: tamamlandı`,
-          event.ok === false ? "default" : "done"
-        );
+        pushLog(setOrchestrationLogs, {
+          textKey:
+            event.ok === false
+              ? "analyze.form.orchestration.personaFailed"
+              : "analyze.form.orchestration.personaDone",
+          params: { index: event.index },
+          tone: event.ok === false ? "default" : "done",
+        });
       }
       break;
+    }
     case "synthesis":
       if (event.status === "running") {
         setPersonaProgress(null);
-        setOrchestrationMessage("Sentez ajanı skorları birleştiriyor…");
-        pushLog(setOrchestrationLogs, "Sentez ajanı çalışıyor…", "synthesis");
+        setOrchestrationActive({ textKey: "analyze.form.orchestration.synthesisRunning" });
+        pushLog(setOrchestrationLogs, {
+          textKey: "analyze.form.orchestration.synthesisWorking",
+          tone: "synthesis",
+        });
       } else {
-        pushLog(setOrchestrationLogs, "Sentez tamamlandı", "done");
+        pushLog(setOrchestrationLogs, {
+          textKey: "analyze.form.orchestration.synthesisDone",
+          tone: "done",
+        });
       }
       break;
     default:
@@ -119,16 +174,24 @@ export function AnalysisForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { getAccessToken } = useAuth();
+  const t = useT();
+  const { locale } = usePreferences();
+
+  const steps = useMemo(
+    () =>
+      [
+        { id: 1, label: t("analyze.form.steps.product") },
+        { id: 2, label: t("analyze.form.steps.sources") },
+        { id: 3, label: t("analyze.form.steps.personas") },
+      ] as const,
+    [t]
+  );
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [orchestrationMessage, setOrchestrationMessage] = useState<string | null>(null);
+  const [orchestrationActive, setOrchestrationActive] = useState<OrchestrationActive | null>(null);
   const [orchestrationLogs, setOrchestrationLogs] = useState<OrchestrationLogItem[]>([]);
-  const [personaProgress, setPersonaProgress] = useState<{
-    index: number;
-    total: number;
-    name: string;
-  } | null>(null);
+  const [personaProgress, setPersonaProgress] = useState<OrchestrationPersonaProgress | null>(null);
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [customPersonas, setCustomPersonas] = useState<CustomPersonaItem[]>([]);
@@ -221,7 +284,15 @@ export function AnalysisForm() {
   }
 
   function loadSample() {
-    setForm({ ...SAMPLE_FORM });
+    setForm({
+      productName: "TaskFlow",
+      productDescription: t("analyze.form.sample.productDescription"),
+      targetAudience: t("analyze.form.sample.targetAudience"),
+      coreFeatures: t("analyze.form.sample.coreFeatures"),
+      differentiator: t("analyze.form.sample.differentiator"),
+      selectedPersonas: [...DEFAULT_PERSONA_IDS],
+      productId: null,
+    });
     setStep(1);
     setError(null);
   }
@@ -229,10 +300,10 @@ export function AnalysisForm() {
   async function ensureProduct(): Promise<string> {
     if (form.productId) return form.productId;
     if (!form.productName.trim()) {
-      throw new Error("Önce ürün adı girin.");
+      throw new Error(t("analyze.form.error.productNameRequired"));
     }
     const token = await getAccessToken();
-    if (!token) throw new Error("Oturum gerekli.");
+    if (!token) throw new Error(t("analyze.form.error.sessionRequired"));
     const created = await createProduct(token, form.productName, form.productDescription);
     setProducts((prev) => [created, ...prev]);
     updateField("productId", created.id);
@@ -248,7 +319,7 @@ export function AnalysisForm() {
     try {
       const productId = await ensureProduct();
       const token = await getAccessToken();
-      if (!token) throw new Error("Oturum gerekli.");
+      if (!token) throw new Error(t("analyze.form.error.sessionRequired"));
       await uploadDocument(token, productId, file);
       await refreshDocuments(productId);
     } catch (err) {
@@ -257,8 +328,12 @@ export function AnalysisForm() {
           ? err.message
           : typeof err === "string"
             ? err
-            : "Yükleme başarısız.";
-      setError(message === "[object Object]" ? "Doküman yüklenemedi. Dosya formatını ve giriş durumunu kontrol edin." : message);
+            : t("analyze.form.error.uploadFailed");
+      setError(
+        message === "[object Object]"
+          ? t("analyze.form.error.uploadDocFailed")
+          : message
+      );
     } finally {
       setUploading(false);
     }
@@ -271,12 +346,12 @@ export function AnalysisForm() {
     try {
       const productId = await ensureProduct();
       const token = await getAccessToken();
-      if (!token) throw new Error("Oturum gerekli.");
+      if (!token) throw new Error(t("analyze.form.error.sessionRequired"));
       await ingestWebUrl(token, productId, webUrl.trim());
       setWebUrl("");
       await refreshDocuments(productId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "URL eklenemedi.");
+      setError(err instanceof Error ? err.message : t("analyze.form.error.urlFailed"));
     } finally {
       setIngestingUrl(false);
     }
@@ -289,7 +364,7 @@ export function AnalysisForm() {
       await deleteDocument(token, id);
       await refreshDocuments(form.productId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Silinemedi.");
+      setError(err instanceof Error ? err.message : t("analyze.form.error.deleteFailed"));
     }
   }
 
@@ -297,7 +372,7 @@ export function AnalysisForm() {
     if (!newPersonaName.trim()) return;
     const token = await getAccessToken();
     if (!token) {
-      setError("Oturum gerekli.");
+      setError(t("analyze.form.error.sessionRequired"));
       return;
     }
     try {
@@ -307,7 +382,7 @@ export function AnalysisForm() {
       setNewPersonaName("");
       setNewPersonaTraits("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Persona oluşturulamadı.");
+      setError(err instanceof Error ? err.message : t("analyze.form.error.personaCreateFailed"));
     }
   }
 
@@ -322,7 +397,7 @@ export function AnalysisForm() {
         selectedPersonas: prev.selectedPersonas.filter((p) => p !== `custom:${id}`),
       }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Silinemedi.");
+      setError(err instanceof Error ? err.message : t("analyze.form.error.deleteFailed"));
     }
   }
 
@@ -337,7 +412,7 @@ export function AnalysisForm() {
     e.preventDefault();
     if (step < 3) {
       if (!canGoNext()) {
-        setError("Ürün adı ve açıklaması zorunludur.");
+        setError(t("analyze.form.error.productRequired"));
         return;
       }
       setError(null);
@@ -345,7 +420,7 @@ export function AnalysisForm() {
         try {
           await ensureProduct();
         } catch (err) {
-          setError(err instanceof Error ? err.message : "Ürün kaydedilemedi.");
+          setError(err instanceof Error ? err.message : t("analyze.form.error.productSaveFailed"));
           return;
         }
       }
@@ -355,33 +430,33 @@ export function AnalysisForm() {
 
     setError(null);
     if (!form.productName.trim() || !form.productDescription.trim()) {
-      setError("Ürün adı ve açıklaması zorunludur.");
+      setError(t("analyze.form.error.productRequired"));
       setStep(1);
       return;
     }
     if (form.selectedPersonas.length === 0) {
-      setError("En az bir kullanıcı profili seçmelisiniz.");
+      setError(t("analyze.form.error.personaRequired"));
       return;
     }
 
     setLoading(true);
-    setOrchestrationMessage("Laboratuvar başlıyor…");
+    setOrchestrationActive({ textKey: "analyze.form.orchestration.labStarting" });
     setOrchestrationLogs([]);
     setPersonaProgress(null);
     try {
       const token = await getAccessToken();
-      if (!token) throw new Error("Analiz için giriş yapmalısınız.");
+      if (!token) throw new Error(t("analyze.form.error.loginRequired"));
       const productId = await ensureProduct();
-      const payload = { ...form, productId };
+      const payload = { ...form, productId, locale };
       const json = await submitAnalysisStream(payload, token, (event) => {
         handleOrchestrationEvent(event, {
-          setOrchestrationMessage,
+          setOrchestrationActive,
           setOrchestrationLogs,
           setPersonaProgress,
         });
       });
       if (!json.success || !json.data) {
-        throw new Error(json.error ?? "Analiz sırasında bir hata oluştu.");
+        throw new Error(json.error ?? t("analyze.form.error.analysisFailed"));
       }
 
       sessionStorage.setItem(STORAGE_KEYS.formData, JSON.stringify(payload));
@@ -395,7 +470,7 @@ export function AnalysisForm() {
         router.push("/results");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Beklenmeyen bir hata oluştu.");
+      setError(err instanceof Error ? err.message : t("analyze.form.error.unexpected"));
     } finally {
       setLoading(false);
       setPersonaProgress(null);
@@ -404,11 +479,11 @@ export function AnalysisForm() {
 
   const sourceKindLabel = useMemo(
     () => (kind?: string) => {
-      if (kind === "web") return "site / landing";
-      if (kind === "screenshot") return "ekran görüntüsü";
-      return "ürün dosyası";
+      if (kind === "web") return t("analyze.form.sourceKind.web");
+      if (kind === "screenshot") return t("analyze.form.sourceKind.screenshot");
+      return t("analyze.form.sourceKind.file");
     },
-    []
+    [t]
   );
 
   return (
@@ -417,7 +492,7 @@ export function AnalysisForm() {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap gap-2">
-          {STEPS.map((s) => (
+          {steps.map((s) => (
             <button
               key={s.id}
               type="button"
@@ -425,8 +500,8 @@ export function AnalysisForm() {
               className={cn(
                 "rounded-xl px-3 py-1.5 text-sm font-medium transition-colors",
                 step === s.id
-                  ? "bg-lab-ink text-white"
-                  : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-lab-chalk"
+                  ? "bg-[#0c1222] text-white dark:bg-lab-signal dark:text-[#0c1222]"
+                  : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-lab-chalk dark:bg-[var(--lab-mist)] dark:text-slate-300 dark:ring-[color:var(--border-subtle)] dark:hover:bg-white/5"
               )}
             >
               {s.id}. {s.label}
@@ -434,24 +509,22 @@ export function AnalysisForm() {
           ))}
         </div>
         <Button type="button" variant="outline" size="sm" onClick={loadSample}>
-          Örnek ürünle dene
+          {t("analyze.form.trySample")}
         </Button>
       </div>
 
       {step === 1 && (
         <Card>
           <CardHeader>
-            <CardTitle>1 · Ürün</CardTitle>
-            <CardDescription>
-              Pitch’inizi yazın. Kaynak eklerken ürün otomatik kaydedilir.
-            </CardDescription>
+            <CardTitle>{t("analyze.form.step1.title")}</CardTitle>
+            <CardDescription>{t("analyze.form.step1.description")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="productSelect">Kayıtlı ürün</Label>
+              <Label htmlFor="productSelect">{t("analyze.form.registeredProduct")}</Label>
               <select
                 id="productSelect"
-                className="flex h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                className="flex h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:border-[color:var(--border-subtle)] dark:bg-[var(--surface)] dark:text-slate-100"
                 value={form.productId ?? ""}
                 onChange={(e) => {
                   const id = e.target.value || null;
@@ -465,7 +538,7 @@ export function AnalysisForm() {
                   }
                 }}
               >
-                <option value="">Yeni ürün</option>
+                <option value="">{t("analyze.form.newProduct")}</option>
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
@@ -474,50 +547,50 @@ export function AnalysisForm() {
               </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="productName">Ürün adı *</Label>
+              <Label htmlFor="productName">{t("analyze.form.productName")}</Label>
               <Input
                 id="productName"
-                placeholder="Örn: TaskFlow"
+                placeholder={t("analyze.form.productNamePlaceholder")}
                 value={form.productName}
                 onChange={(e) => updateField("productName", e.target.value)}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="productDescription">Ürün açıklaması *</Label>
+              <Label htmlFor="productDescription">{t("analyze.form.productDescription")}</Label>
               <Textarea
                 id="productDescription"
-                placeholder="Ürününüz ne yapıyor? Hangi problemi çözüyor?"
+                placeholder={t("analyze.form.productDescriptionPlaceholder")}
                 value={form.productDescription}
                 onChange={(e) => updateField("productDescription", e.target.value)}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="targetAudience">Hedef kitle</Label>
+              <Label htmlFor="targetAudience">{t("analyze.form.targetAudience")}</Label>
               <Textarea
                 id="targetAudience"
-                placeholder="Kimler kullanacak?"
+                placeholder={t("analyze.form.targetAudiencePlaceholder")}
                 className="min-h-[80px]"
                 value={form.targetAudience}
                 onChange={(e) => updateField("targetAudience", e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="coreFeatures">Temel özellikler</Label>
+              <Label htmlFor="coreFeatures">{t("analyze.form.coreFeatures")}</Label>
               <Textarea
                 id="coreFeatures"
-                placeholder="Özellikleri listeleyin"
+                placeholder={t("analyze.form.coreFeaturesPlaceholder")}
                 className="min-h-[80px]"
                 value={form.coreFeatures}
                 onChange={(e) => updateField("coreFeatures", e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="differentiator">Rakiplerden farkı</Label>
+              <Label htmlFor="differentiator">{t("analyze.form.differentiator")}</Label>
               <Textarea
                 id="differentiator"
-                placeholder="Sizi farklı kılan nedir?"
+                placeholder={t("analyze.form.differentiatorPlaceholder")}
                 className="min-h-[80px]"
                 value={form.differentiator}
                 onChange={(e) => updateField("differentiator", e.target.value)}
@@ -530,30 +603,25 @@ export function AnalysisForm() {
       {step === 2 && (
         <Card>
           <CardHeader>
-            <CardTitle>2 · Kaynaklar</CardTitle>
-            <CardDescription>
-              Dosya, ekran görüntüsü veya site URL’si — persona’lar buradan bağlam alır.
-            </CardDescription>
+            <CardTitle>{t("analyze.form.step2.title")}</CardTitle>
+            <CardDescription>{t("analyze.form.step2.description")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-2 text-xs text-slate-500 sm:grid-cols-4">
-              <p className="rounded-lg bg-lab-chalk px-3 py-2">Dosya / ekran görüntüsü</p>
-              <p className="rounded-lg bg-lab-chalk px-3 py-2">Site / landing URL</p>
-              <p className="rounded-lg bg-lab-chalk px-3 py-2">Geçmiş testler</p>
+            <div className="grid gap-2 text-xs text-slate-500 sm:grid-cols-4 dark:text-slate-400">
+              <p className="rounded-lg bg-lab-chalk px-3 py-2">{t("analyze.form.sourceHint.file")}</p>
+              <p className="rounded-lg bg-lab-chalk px-3 py-2">{t("analyze.form.sourceHint.url")}</p>
+              <p className="rounded-lg bg-lab-chalk px-3 py-2">{t("analyze.form.sourceHint.history")}</p>
               <p className="rounded-lg bg-lab-ink px-3 py-2 text-lab-signal">
-                FirstClick uzmanlık bilgisi (otomatik)
+                {t("analyze.form.sourceHint.expertise")}
               </p>
             </div>
-            <p className="text-xs text-slate-500">
-              Persona’lar hem sizin ürün kaynaklarınıza hem FirstClick’in global UX/conversion bilgi
-              tabanına bakar — genel ChatGPT yorumu değil.
-            </p>
-            <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-lab-chalk/80 px-4 py-8 text-center transition-colors hover:border-brand-500 hover:bg-brand-50/40">
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t("analyze.form.sourceNote")}</p>
+            <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-lab-chalk/80 px-4 py-8 text-center transition-colors hover:border-brand-500 hover:bg-brand-50/40 dark:border-[color:var(--border-subtle)] dark:hover:bg-brand-500/10">
               <FileUp className="h-6 w-6 text-brand-600" />
-              <span className="text-sm font-medium text-slate-700">
-                {uploading ? "Yükleniyor…" : "Dosya veya ekran görüntüsü yükle"}
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                {uploading ? t("analyze.form.uploading") : t("analyze.form.uploadLabel")}
               </span>
-              <span className="text-xs text-slate-500">PDF · MD · TXT · PNG · JPG · WEBP · max 8MB</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">{t("analyze.form.uploadFormats")}</span>
               <input
                 type="file"
                 className="hidden"
@@ -566,12 +634,12 @@ export function AnalysisForm() {
               />
             </label>
             <div className="space-y-2">
-              <Label htmlFor="webUrl">Site veya landing URL’si</Label>
+              <Label htmlFor="webUrl">{t("analyze.form.webUrlLabel")}</Label>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Input
                   id="webUrl"
                   type="url"
-                  placeholder="https://urun-sitesi.com"
+                  placeholder={t("analyze.form.webUrlPlaceholder")}
                   value={webUrl}
                   onChange={(e) => setWebUrl(e.target.value)}
                   disabled={ingestingUrl}
@@ -583,17 +651,17 @@ export function AnalysisForm() {
                   disabled={ingestingUrl || !webUrl.trim()}
                 >
                   {ingestingUrl ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  Sayfayı ekle
+                  {t("analyze.form.addPage")}
                 </Button>
               </div>
             </div>
             {documents.length > 0 && (
-              <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
+              <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white dark:divide-[color:var(--border-subtle)] dark:border-[color:var(--border-subtle)] dark:bg-[var(--surface)]">
                 {documents.map((doc) => (
                   <li key={doc.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
                     <div className="min-w-0">
-                      <p className="truncate text-slate-700">{doc.title}</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="truncate text-slate-700 dark:text-slate-200">{doc.title}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
                         {sourceKindLabel(doc.sourceKind)}
                         {doc.sourceUrl ? ` · ${doc.sourceUrl}` : ""}
                       </p>
@@ -601,8 +669,8 @@ export function AnalysisForm() {
                     <button
                       type="button"
                       onClick={() => handleDeleteDoc(doc.id)}
-                      className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                      aria-label="Sil"
+                      className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
+                      aria-label={t("analyze.form.delete")}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -617,10 +685,8 @@ export function AnalysisForm() {
       {step === 3 && (
         <Card>
           <CardHeader>
-            <CardTitle>3 · Personalar</CardTitle>
-            <CardDescription>
-              Hazır tipler + kendi persona’nız. En az birini seçin.
-            </CardDescription>
+            <CardTitle>{t("analyze.form.step3.title")}</CardTitle>
+            <CardDescription>{t("analyze.form.step3.description")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex flex-wrap gap-2">
@@ -631,10 +697,12 @@ export function AnalysisForm() {
                   onClick={() =>
                     setForm((prev) => ({ ...prev, selectedPersonas: [...pack.personaIds] }))
                   }
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-xs hover:border-brand-400 hover:bg-brand-50"
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-xs hover:border-brand-400 hover:bg-brand-50 dark:border-[color:var(--border-subtle)] dark:bg-[var(--surface)] dark:hover:bg-brand-500/10"
                 >
                   <span className="font-medium text-lab-ink">{pack.label}</span>
-                  <span className="mt-0.5 block text-slate-500">{pack.description}</span>
+                  <span className="mt-0.5 block text-slate-500">
+                    {t(personaPackDescriptionKey(pack.id))}
+                  </span>
                 </button>
               ))}
             </div>
@@ -649,34 +717,50 @@ export function AnalysisForm() {
                     className={cn(
                       "rounded-xl border p-4 text-left transition-all duration-200",
                       selected
-                        ? "border-brand-400 bg-brand-50 shadow-sm shadow-brand-500/10"
-                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                        ? "border-brand-400 bg-brand-50 shadow-sm shadow-brand-500/10 dark:border-transparent dark:bg-[#0c1222] dark:shadow-none dark:ring-1 dark:ring-lab-signal/40"
+                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 dark:border-transparent dark:bg-[#0c1222] dark:hover:bg-[#151b27]"
                     )}
                   >
-                    <p className="text-sm font-medium text-slate-900">{persona.label}</p>
-                    <p className="mt-1 text-xs text-slate-500">{persona.description}</p>
+                    <p
+                      className={cn(
+                        "text-sm font-medium",
+                        selected
+                          ? "text-brand-800 dark:text-lab-signal"
+                          : "text-slate-900 dark:text-slate-200"
+                      )}
+                    >
+                      {localizedPersonaLabel(t, persona.id)}
+                    </p>
+                    <p
+                      className={cn(
+                        "mt-1 text-xs",
+                        selected ? "text-brand-700/80 dark:text-slate-400" : "text-slate-500 dark:text-slate-400"
+                      )}
+                    >
+                      {localizedPersonaDescription(t, persona.id)}
+                    </p>
                   </button>
                 );
               })}
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-lab-chalk/60 p-4">
-              <p className="text-sm font-medium text-lab-ink">Özel persona ekle</p>
+            <div className="rounded-xl border border-slate-200 bg-lab-chalk/60 p-4 dark:border-[color:var(--border-subtle)]">
+              <p className="text-sm font-medium text-lab-ink">{t("analyze.form.customPersonaTitle")}</p>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <Input
-                  placeholder="Ad (örn: CTO)"
+                  placeholder={t("analyze.form.customPersonaNamePlaceholder")}
                   value={newPersonaName}
                   onChange={(e) => setNewPersonaName(e.target.value)}
                 />
                 <Input
-                  placeholder="Özellikler / endişeler"
+                  placeholder={t("analyze.form.customPersonaTraitsPlaceholder")}
                   value={newPersonaTraits}
                   onChange={(e) => setNewPersonaTraits(e.target.value)}
                 />
               </div>
               <Button type="button" variant="outline" size="sm" className="mt-3" onClick={handleCreateCustomPersona}>
                 <Plus className="h-4 w-4" />
-                Ekle
+                {t("analyze.form.add")}
               </Button>
               {customPersonas.length > 0 && (
                 <ul className="mt-4 space-y-2">
@@ -688,18 +772,36 @@ export function AnalysisForm() {
                         key={p.id}
                         className={cn(
                           "flex items-center justify-between gap-2 rounded-xl border px-3 py-2 text-sm",
-                          selected ? "border-brand-400 bg-brand-50" : "border-slate-200 bg-white"
+                          selected
+                            ? "border-brand-400 bg-brand-50 dark:border-transparent dark:bg-[#0c1222] dark:ring-1 dark:ring-lab-signal/40"
+                            : "border-slate-200 bg-white dark:border-transparent dark:bg-[#0c1222]"
                         )}
                       >
                         <button type="button" className="min-w-0 flex-1 text-left" onClick={() => togglePersona(id)}>
-                          <p className="font-medium text-slate-800">{p.name}</p>
-                          {p.traits ? <p className="truncate text-xs text-slate-500">{p.traits}</p> : null}
+                          <p
+                            className={cn(
+                              "font-medium",
+                              selected ? "text-brand-800 dark:text-lab-signal" : "text-slate-800 dark:text-slate-200"
+                            )}
+                          >
+                            {p.name}
+                          </p>
+                          {p.traits ? (
+                            <p
+                              className={cn(
+                                "truncate text-xs",
+                                selected ? "text-brand-700/80 dark:text-slate-400" : "text-slate-500 dark:text-slate-400"
+                              )}
+                            >
+                              {p.traits}
+                            </p>
+                          ) : null}
                         </button>
                         <button
                           type="button"
                           onClick={() => handleDeleteCustomPersona(p.id)}
-                          className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                          aria-label="Sil"
+                          className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
+                          aria-label={t("analyze.form.delete")}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -714,14 +816,14 @@ export function AnalysisForm() {
       )}
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
           {error}
         </div>
       )}
 
       {loading && (
         <OrchestrationPanel
-          activeMessage={orchestrationMessage}
+          active={orchestrationActive}
           logs={orchestrationLogs}
           personaProgress={personaProgress}
         />
@@ -735,23 +837,23 @@ export function AnalysisForm() {
           onClick={() => setStep((s) => Math.max(1, s - 1))}
         >
           <ChevronLeft className="h-4 w-4" />
-          Geri
+          {t("analyze.form.back")}
         </Button>
         <Button type="submit" size="lg" disabled={loading}>
           {loading ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Analiz ediliyor…
+              {t("analyze.form.analyzing")}
             </>
           ) : step < 3 ? (
             <>
-              Devam
+              {t("analyze.form.continue")}
               <ChevronRight className="h-4 w-4" />
             </>
           ) : (
             <>
               <Sparkles className="h-4 w-4" />
-              Analizi Başlat
+              {t("analyze.form.startAnalysis")}
             </>
           )}
         </Button>

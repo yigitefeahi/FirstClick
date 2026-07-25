@@ -13,10 +13,15 @@ import { EmptyState, LoadingState } from "@/components/ui/empty-state";
 import { deleteAnalysis, listAnalyses, type AnalysisSummary } from "@/lib/api";
 import { useAuth } from "@/lib/supabase/auth-context";
 import { useRouter } from "next/navigation";
+import { localeDateTag } from "@/lib/i18n/dictionaries";
+import { usePreferences, useT } from "@/lib/i18n/preferences-context";
 
 function HistoryContent() {
   const { getAccessToken } = useAuth();
   const router = useRouter();
+  const t = useT();
+  const { locale } = usePreferences();
+  const dateTag = localeDateTag(locale);
   const [items, setItems] = useState<AnalysisSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -25,7 +30,7 @@ function HistoryContent() {
 
   async function refresh() {
     const token = await getAccessToken();
-    if (!token) throw new Error("Oturum bulunamadı.");
+    if (!token) throw new Error(t("common.errorSessionNotFound"));
     setItems(await listAnalyses(token));
   }
 
@@ -36,7 +41,7 @@ function HistoryContent() {
         await refresh();
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Geçmiş yüklenemedi.");
+          setError(err instanceof Error ? err.message : t("history.loadFailed"));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -68,36 +73,36 @@ function HistoryContent() {
       await deleteAnalysis(token, id);
       setItems((prev) => prev.filter((i) => i.id !== id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Silinemedi.");
+      setError(err instanceof Error ? err.message : t("common.errorDeleteFailed"));
     } finally {
       setDeletingId(null);
     }
   }
 
   if (loading) {
-    return <LoadingState label="Geçmiş yükleniyor…" />;
+    return <LoadingState label={t("history.loading")} />;
   }
 
   return (
     <div className="space-y-6">
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
           {error}
         </div>
       )}
 
       {items.length > 0 && (
         <div className="flex flex-wrap items-center gap-3">
-          <label className="text-sm text-slate-600" htmlFor="productFilter">
-            Ürün filtresi
+          <label className="text-sm text-slate-600 dark:text-slate-400" htmlFor="productFilter">
+            {t("history.productFilter")}
           </label>
           <select
             id="productFilter"
-            className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm"
+            className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm dark:border-white/10 dark:bg-surface dark:text-white"
             value={productFilter}
             onChange={(e) => setProductFilter(e.target.value)}
           >
-            <option value="all">Tümü</option>
+            <option value="all">{t("common.all")}</option>
             {productNames.map((name) => (
               <option key={name} value={name}>
                 {name}
@@ -109,11 +114,11 @@ function HistoryContent() {
 
       {filtered.length === 0 ? (
         <EmptyState
-          title="Henüz kayıtlı analiz yok"
-          description="İlk testi çalıştırın; sonuçlar burada listelenir ve karşılaştırılabilir."
+          title={t("history.emptyTitle")}
+          description={t("history.emptyDesc")}
           action={
-            <Link href="/analyze" className="text-sm font-medium text-brand-700 hover:text-brand-800">
-              İlk analizi başlat
+            <Link href="/analyze" className="text-sm font-medium text-brand-700 hover:text-brand-800 dark:text-brand-400">
+              {t("history.startFirst")}
             </Link>
           }
         />
@@ -129,7 +134,7 @@ function HistoryContent() {
                 <CardTitle className="text-base">{item.productName}</CardTitle>
                 <div className="flex items-center gap-2">
                   <Badge variant={item.source === "openai" ? "success" : "neutral"}>
-                    {item.source === "openai" ? "AI" : "Demo"}
+                    {item.source === "openai" ? t("common.ai") : t("common.demo")}
                   </Badge>
                   <Button
                     type="button"
@@ -137,18 +142,22 @@ function HistoryContent() {
                     size="sm"
                     disabled={deletingId === item.id}
                     onClick={(e) => handleDelete(item.id, e)}
-                    aria-label="Sil"
+                    aria-label={t("common.delete")}
                   >
                     <Trash2 className="h-4 w-4 text-slate-400" />
                   </Button>
                 </div>
               </CardHeader>
               <CardContent className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
-                {typeof item.overallScore === "number" && <span>Skor: {item.overallScore}</span>}
+                {typeof item.overallScore === "number" && (
+                  <span>
+                    {t("common.score")}: {item.overallScore}
+                  </span>
+                )}
                 {item.createdAt && (
                   <span className="inline-flex items-center gap-1">
                     <Clock3 className="h-3.5 w-3.5" />
-                    {new Date(item.createdAt).toLocaleString("tr-TR")}
+                    {new Date(item.createdAt).toLocaleString(dateTag)}
                   </span>
                 )}
               </CardContent>
@@ -161,6 +170,8 @@ function HistoryContent() {
 }
 
 export default function HistoryPage() {
+  const t = useT();
+
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
@@ -171,20 +182,20 @@ export default function HistoryPage() {
             className="mb-6 inline-flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-brand-700"
           >
             <ArrowLeft className="h-4 w-4" />
-            Analize dön
+            {t("common.backToAnalyze")}
           </Link>
           <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h1 className="font-display text-3xl font-semibold tracking-tight text-lab-ink">
-                Analiz Geçmişi
+              <h1 className="font-display text-3xl font-semibold tracking-tight text-lab-ink dark:text-white">
+                {t("history.title")}
               </h1>
-              <p className="mt-2 text-slate-500">Her test, sonraki karşılaştırmanın ham maddesi.</p>
+              <p className="mt-2 text-slate-500 dark:text-slate-400">{t("history.subtitle")}</p>
             </div>
             <Link
               href="/compare"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:text-brand-800"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:text-brand-800 dark:text-brand-400"
             >
-              Ne değişti? — karşılaştır
+              {t("history.compareLink")}
             </Link>
           </div>
           <AuthGuard>

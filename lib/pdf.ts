@@ -1,6 +1,13 @@
 import jsPDF from "jspdf";
 import type { AnalysisResult } from "@/types/analysis";
 import { ROBOTO_REGULAR_BASE64, ROBOTO_BOLD_BASE64 } from "@/lib/pdf-fonts";
+import {
+  localeDateTag,
+  translate,
+  translateParams,
+  type Locale,
+} from "@/lib/i18n/dictionaries";
+import { localizedPersonaDisplayName } from "@/lib/i18n/persona-labels";
 
 function registerFonts(doc: jsPDF) {
   doc.addFileToVFS("Roboto-Regular.ttf", ROBOTO_REGULAR_BASE64);
@@ -72,9 +79,9 @@ function drawHeader(doc: jsPDF) {
   setText(doc, COLORS.text);
 }
 
-function drawFooters(doc: jsPDF) {
+function drawFooters(doc: jsPDF, locale: Locale) {
   const totalPages = doc.getNumberOfPages();
-  const today = new Date().toLocaleDateString("tr-TR");
+  const today = new Date().toLocaleDateString(localeDateTag(locale));
 
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
@@ -198,22 +205,30 @@ function paragraph(doc: jsPDF, text: string, y: number): number {
 }
 
 function likelihoodColor(likelihood: string): readonly number[] {
-  if (likelihood === "Yüksek") return COLORS.success;
-  if (likelihood === "Orta") return COLORS.warning;
+  if (likelihood === "Yüksek" || likelihood === "High") return COLORS.success;
+  if (likelihood === "Orta" || likelihood === "Medium") return COLORS.warning;
   return COLORS.danger;
+}
+
+function likelihoodDisplay(likelihood: string, locale: Locale): string {
+  if (likelihood === "Yüksek" || likelihood === "High") return translate(locale, "pdf.likelihoodHigh");
+  if (likelihood === "Orta" || likelihood === "Medium") return translate(locale, "pdf.likelihoodMedium");
+  return translate(locale, "pdf.likelihoodLow");
 }
 
 function personaCard(
   doc: jsPDF,
   persona: AnalysisResult["personas"][number],
-  y: number
+  y: number,
+  locale: Locale
 ): number {
+  const t = (key: string) => translate(locale, key);
   const fields: Array<{ label: string; value: string }> = [
-    { label: "İlk İzlenim", value: persona.firstImpression },
-    { label: "Anladığı Şey", value: persona.understood },
-    { label: "Kafasının Karıştığı Nokta", value: persona.confusion },
-    { label: "Vazgeçme Sebebi", value: persona.dropOffReason },
-    { label: "Geliştirme Önerisi", value: persona.suggestion },
+    { label: t("pdf.firstImpression"), value: persona.firstImpression },
+    { label: t("pdf.understood"), value: persona.understood },
+    { label: t("pdf.confusion"), value: persona.confusion },
+    { label: t("pdf.dropOffReason"), value: persona.dropOffReason },
+    { label: t("pdf.suggestion"), value: persona.suggestion },
   ];
 
   const wrapped = fields.map((f) => ({
@@ -235,10 +250,12 @@ function personaCard(
   doc.setFont("Roboto", "bold");
   doc.setFontSize(12.5);
   setText(doc, COLORS.primaryDark);
-  doc.text(persona.name, PAGE.marginX + 6, y + 1);
+  doc.text(localizedPersonaDisplayName(t, persona.name), PAGE.marginX + 6, y + 1);
 
   const badgeColor = likelihoodColor(persona.likelihood);
-  const badgeText = `Kullanma: ${persona.likelihood}`;
+  const badgeText = translateParams(locale, "pdf.likelihood", {
+    value: likelihoodDisplay(persona.likelihood, locale),
+  });
   doc.setFont("Roboto", "bold");
   doc.setFontSize(8.5);
   const badgeWidth = doc.getTextWidth(badgeText) + 8;
@@ -276,8 +293,11 @@ export function generatePDF(
     ragSources?: { citation: string; sourceType: string; excerpt: string }[];
     analysisId?: string | null;
     compareDelta?: { label: string; before: number; after: number; delta: number }[];
+    locale?: Locale;
   }
 ) {
+  const locale: Locale = extras?.locale === "en" ? "en" : "tr";
+  const t = (key: string) => translate(locale, key);
   const doc = new jsPDF("p", "mm", "a4");
   registerFonts(doc);
 
@@ -288,33 +308,39 @@ export function generatePDF(
   doc.setFont("Roboto", "bold");
   doc.setFontSize(16);
   setText(doc, COLORS.text);
-  doc.text(productName || "Unknown Product", PAGE.marginX, y);
+  doc.text(productName || t("pdf.unknownProduct"), PAGE.marginX, y);
   y += 8;
 
-  const today = new Date().toLocaleDateString("tr-TR");
+  const today = new Date().toLocaleDateString(localeDateTag(locale));
   doc.setFont("Roboto", "normal");
   doc.setFontSize(10.5);
   setText(doc, COLORS.muted);
-  doc.text(`Tarih: ${today}`, PAGE.marginX, y);
+  doc.text(translateParams(locale, "pdf.date", { date: today }), PAGE.marginX, y);
   y += 6;
-  doc.text(`Analiz Kaynağı: ${source === "openai" ? "OpenAI" : "Demo (Mock)"}`, PAGE.marginX, y);
+  doc.text(
+    translateParams(locale, "pdf.source", {
+      source: source === "openai" ? t("pdf.sourceAi") : t("pdf.sourceDemo"),
+    }),
+    PAGE.marginX,
+    y
+  );
   if (extras?.analysisId) {
     y += 6;
-    doc.text(`Analiz ID: ${extras.analysisId}`, PAGE.marginX, y);
+    doc.text(translateParams(locale, "pdf.analysisId", { id: extras.analysisId }), PAGE.marginX, y);
   }
   setText(doc, COLORS.text);
   y += 12;
 
-  y = sectionTitle(doc, "FirstClick Skorları", y);
-  y = scoreBar(doc, "Genel Skor", result.overallScore, y);
-  y = scoreBar(doc, "Anlaşılabilirlik", result.clarityScore, y);
-  y = scoreBar(doc, "Kullanma İsteği", result.adoptionScore, y);
-  y = scoreBar(doc, "Onboarding Riski", result.onboardingRiskScore, y, true);
-  y = scoreBar(doc, "Hedef Kitle Uyumu", result.targetFitScore, y);
+  y = sectionTitle(doc, t("pdf.scores"), y);
+  y = scoreBar(doc, t("pdf.overall"), result.overallScore, y);
+  y = scoreBar(doc, t("pdf.clarity"), result.clarityScore, y);
+  y = scoreBar(doc, t("pdf.adoption"), result.adoptionScore, y);
+  y = scoreBar(doc, t("pdf.onboardingRisk"), result.onboardingRiskScore, y, true);
+  y = scoreBar(doc, t("pdf.targetFit"), result.targetFitScore, y);
   y += 4;
 
   if (extras?.compareDelta && extras.compareDelta.length > 0) {
-    y = sectionTitle(doc, "v1 → v2 Skor Farkları", y);
+    y = sectionTitle(doc, t("pdf.compareDeltas"), y);
     const deltaLines = extras.compareDelta.map(
       (d) =>
         `${d.label}: ${d.before} → ${d.after} (${d.delta > 0 ? "+" : ""}${d.delta})`
@@ -323,40 +349,40 @@ export function generatePDF(
     y += 4;
   }
 
-  y = sectionTitle(doc, "Persona Simülasyonları", y);
+  y = sectionTitle(doc, t("pdf.personaSims"), y);
   result.personas.forEach((persona) => {
-    y = personaCard(doc, persona, y);
+    y = personaCard(doc, persona, y, locale);
   });
 
-  y = sectionTitle(doc, "En Büyük Kör Noktalar", y);
+  y = sectionTitle(doc, t("pdf.blindSpots"), y);
   y = bulletList(doc, result.blindSpots, y);
   y += 4;
 
-  y = sectionTitle(doc, "Vazgeçme Noktaları", y);
+  y = sectionTitle(doc, t("pdf.dropOffs"), y);
   y = bulletList(doc, result.dropOffPoints, y);
   y += 4;
 
-  y = sectionTitle(doc, "Öncelikli Aksiyon Planı", y);
+  y = sectionTitle(doc, t("pdf.actionPlan"), y);
   y = bulletList(doc, result.actionPlan, y, true);
   y += 4;
 
-  y = sectionTitle(doc, "Daha İyi Ürün Anlatımı Önerisi", y);
+  y = sectionTitle(doc, t("pdf.improvedPitch"), y);
   y = paragraph(doc, result.improvedPitch, y);
   y += 2;
 
-  y = sectionTitle(doc, "Jüri / Yatırımcı Soruları", y);
+  y = sectionTitle(doc, t("pdf.toughQuestions"), y);
   y = bulletList(doc, result.toughQuestions, y, true);
 
   if (extras?.ragSources && extras.ragSources.length > 0) {
     y += 4;
-    y = sectionTitle(doc, "Kaynaklar (citations)", y);
+    y = sectionTitle(doc, t("pdf.sources"), y);
     const cites = extras.ragSources.map(
       (s) => `${s.citation} — ${s.excerpt.slice(0, 120)}${s.excerpt.length > 120 ? "…" : ""}`
     );
     y = bulletList(doc, cites, y);
   }
 
-  drawFooters(doc);
+  drawFooters(doc, locale);
 
   const safeName = (productName || "FirstClick_Report").replace(/[^a-z0-9]+/gi, "_");
   doc.save(`${safeName}.pdf`);

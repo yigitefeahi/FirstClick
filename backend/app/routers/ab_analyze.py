@@ -21,6 +21,7 @@ async def analyze_ab(
     if invalid:
         raise HTTPException(status_code=400, detail="Geçersiz persona seçimi.")
 
+    locale = body.locale if body.locale in ("tr", "en") else "tr"
     form_a = AnalysisFormData(
         productName=body.product_name,
         productDescription=body.pitch_a,
@@ -29,6 +30,7 @@ async def analyze_ab(
         differentiator=body.differentiator,
         selectedPersonas=body.selected_personas,
         productId=body.product_id,
+        locale=locale,
     )
     form_b = AnalysisFormData(
         productName=body.product_name,
@@ -38,6 +40,7 @@ async def analyze_ab(
         differentiator=body.differentiator,
         selectedPersonas=body.selected_personas,
         productId=body.product_id,
+        locale=locale,
     )
 
     result_a, source_a, rag_chunks_a = await run_analysis(form_a, user_id=user.id)

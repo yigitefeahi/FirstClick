@@ -1,6 +1,7 @@
 "use client";
 
 import { Mic, Send } from "lucide-react";
+import { useT } from "@/lib/i18n/preferences-context";
 
 type PresenceAnswerConfirmProps = {
   open: boolean;
@@ -15,6 +16,8 @@ export function PresenceAnswerConfirm({
   onSubmit,
   onContinue,
 }: PresenceAnswerConfirmProps) {
+  const t = useT();
+
   if (!open) return null;
 
   const preview = transcript.trim();
@@ -28,11 +31,10 @@ export function PresenceAnswerConfirm({
         aria-labelledby="presence-answer-confirm-title"
       >
         <p id="presence-answer-confirm-title" className="presence-answer-confirm-title text-base font-semibold">
-          Sorunuz bitti mi?
+          {t("presence.confirmTitle")}
         </p>
         <p className="presence-answer-confirm-desc mt-1.5 text-sm leading-relaxed">
-          Yaklaşık 5 saniye sessizlik algılandı. Gönderin veya konuşmaya devam edin — tekrar
-          konuşursanız bu soru kaybolur, dinleme sürer.
+          {t("presence.confirmDesc")}
         </p>
 
         {truncated ? (
@@ -48,7 +50,7 @@ export function PresenceAnswerConfirm({
             className="presence-answer-confirm-secondary inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition hover:brightness-110"
           >
             <Mic size={16} aria-hidden />
-            Konuşmaya devam
+            {t("presence.confirmContinue")}
           </button>
           <button
             type="button"
@@ -56,7 +58,7 @@ export function PresenceAnswerConfirm({
             className="presence-answer-confirm-primary inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition hover:brightness-110"
           >
             <Send size={16} aria-hidden />
-            Evet, gönder
+            {t("presence.confirmSubmit")}
           </button>
         </div>
       </div>

@@ -1,0 +1,86 @@
+═══════════════════════════════════════════
+  FirstClick — Arkadaşlar için kurulum
+═══════════════════════════════════════════
+
+Bu zip “çalışır site” değil; kaynak kod.
+Bir kez kurulum yapınca herkes kendi bilgisayarında çalıştırır.
+
+───────────────────────────────────────────
+0) Bilgisayarda olması gerekenler
+───────────────────────────────────────────
+• Node.js 20+     → https://nodejs.org
+• Python 3.11+    → https://www.python.org
+• Docker Desktop  → kur, aç, yeşil olana kadar bekle
+• Supabase CLI    → https://supabase.com/docs/guides/cli
+
+• OpenAI API key  → https://platform.openai.com/api-keys
+  (analiz / avatar için ZORUNLU — herkes kendi key’ini kullanır)
+
+───────────────────────────────────────────
+1) Zip’i aç
+───────────────────────────────────────────
+Firstclick-main klasörünü istediğin yere koy.
+
+───────────────────────────────────────────
+2) Tek seferlik kurulum
+───────────────────────────────────────────
+MAC:
+  Terminal aç → klasöre gir → şunu yaz:
+
+    chmod +x scripts/*.sh
+    ./scripts/setup-mac.sh
+
+WINDOWS:
+  scripts\setup-windows.bat  dosyasına çift tıkla
+  (PowerShell engellerse: sağ tık → Yönetici / yine de çalıştır)
+
+───────────────────────────────────────────
+3) OpenAI key yaz (atlanırsa AI çalışmaz)
+───────────────────────────────────────────
+  backend/.env  dosyasını aç
+  OPENAI_API_KEY=sk-...  satırına kendi key’ini yapıştır
+  Kaydet
+
+───────────────────────────────────────────
+4) Her açılışta çalıştır
+───────────────────────────────────────────
+MAC:       ./scripts/start-mac.sh
+WINDOWS:   scripts\start-windows.bat
+
+Sonra tarayıcı:  http://127.0.0.1:3000
+
+───────────────────────────────────────────
+Sık hatalar
+───────────────────────────────────────────
+• ERR_CONNECTION_REFUSED → start script çalışmıyor / pencere kapalı
+• Docker hatası → Docker Desktop açık mı?
+• Mikrofon/kamera → Chrome + localhost; “Odaya katıl”da İzin ver
+• AI cevap yok → OPENAI_API_KEY yanlış/eksik
+
+───────────────────────────────────────────
+5) Google / GitHub ile giriş (isteğe bağlı)
+───────────────────────────────────────────
+E-posta/şifre her zaman çalışır. Sosyal giriş için OAuth uygulaması gerekir:
+
+1) Google: https://console.cloud.google.com/apis/credentials
+   → Create Credentials → OAuth client ID → Web application
+   Authorized JavaScript origins:
+     http://127.0.0.1:3000
+     http://localhost:3000
+   Authorized redirect URIs (tam olarak):
+     http://127.0.0.1:54321/auth/v1/callback
+
+2) GitHub: https://github.com/settings/developers
+   → OAuth Apps → New OAuth App
+   Homepage URL: http://127.0.0.1:3000
+   Authorization callback URL (tam olarak):
+     http://127.0.0.1:54321/auth/v1/callback
+
+3) supabase/.env.example içeriğini proje kökündeki `.env` dosyasına kopyala,
+   Client ID / Secret doldur (Next’in `.env.local` dosyasına değil)
+4) Yeniden başlat:  supabase stop && supabase start
+   (veya ./scripts/start-mac.sh)
+
+Test: http://127.0.0.1:3000/login → Google veya GitHub
+
+Sorular için proje sahibiyle konuşun.

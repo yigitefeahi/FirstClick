@@ -162,11 +162,15 @@ site_url = "http://localhost:3000"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 additional_redirect_urls = [
   "http://localhost:3000",
+  "http://localhost:3000/**",
   "http://localhost:3000/analyze",
+  "http://localhost:3000/auth/callback",
   "http://localhost:3000/login",
   "http://localhost:3000/reset-password",
   "http://127.0.0.1:3000",
+  "http://127.0.0.1:3000/**",
   "http://127.0.0.1:3000/analyze",
+  "http://127.0.0.1:3000/auth/callback",
   "http://127.0.0.1:3000/login",
   "http://127.0.0.1:3000/reset-password",
 ]
@@ -343,18 +347,21 @@ skip_nonce_check = false
 # If enabled, it will allow the user to successfully authenticate when the provider does not return an email address.
 email_optional = false
 
+# OAuth secrets live in supabase/.env (see supabase/.env.example).
+# Google Cloud / GitHub callback URI (exact):
+#   http://127.0.0.1:54321/auth/v1/callback
 [auth.external.google]
-enabled = false
+enabled = true
 client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
-redirect_uri = ""
+redirect_uri = "http://127.0.0.1:54321/auth/v1/callback"
 skip_nonce_check = true
 
 [auth.external.github]
-enabled = false
+enabled = true
 client_id = "env(SUPABASE_AUTH_EXTERNAL_GITHUB_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET)"
-redirect_uri = ""
+redirect_uri = "http://127.0.0.1:54321/auth/v1/callback"
 
 # Allow Solana wallet holders to sign in to your project via the Sign in with Solana (SIWS, EIP-4361) standard.
 # You can configure "web3" rate limit in the [auth.rate_limit] section and set up [auth.captcha] if self-hosting.

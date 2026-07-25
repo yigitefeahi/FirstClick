@@ -31,9 +31,9 @@ export function Progress({
     <div className={cn("space-y-2", className)}>
       {(showLabel || label) && (
         <div className="flex items-center justify-between text-sm">
-          {label && <span className="font-medium text-slate-700">{label}</span>}
+          {label && <span className="font-medium text-slate-700 dark:text-slate-300">{label}</span>}
           {showLabel && (
-            <span className="font-semibold tabular-nums text-slate-900">{clamped}/100</span>
+            <span className="font-semibold tabular-nums text-slate-900 dark:text-white">{clamped}/100</span>
           )}
         </div>
       )}

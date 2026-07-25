@@ -6,6 +6,8 @@ export interface AnalysisFormData {
   differentiator: string;
   selectedPersonas: string[];
   productId?: string | null;
+  /** UI preference language — drives AI output language for new analyses */
+  locale?: "tr" | "en";
 }
 
 export interface PersonaAnalysis {
@@ -13,7 +15,7 @@ export interface PersonaAnalysis {
   firstImpression: string;
   understood: string;
   confusion: string;
-  likelihood: "Yüksek" | "Orta" | "Düşük";
+  likelihood: "Yüksek" | "Orta" | "Düşük" | "High" | "Medium" | "Low";
   dropOffReason: string;
   suggestion: string;
   citations?: string[];
@@ -47,6 +49,7 @@ export interface RagSource {
   scope?: "global" | "user" | string | null;
   title?: string | null;
   category?: string | null;
+  score?: number | null;
 }
 
 export interface AnalyzeApiResponse {

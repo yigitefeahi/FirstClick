@@ -23,6 +23,8 @@ import {
   type LipsyncProcessor,
   type TalkingHeadInstance,
 } from "@/lib/presence/load-talkinghead";
+import type { Locale } from "@/lib/i18n/dictionaries";
+import { useT } from "@/lib/i18n/preferences-context";
 import type { PersonaAvatarConfig } from "@/lib/persona-avatars";
 
 export type TalkingHeadAvatarHandle = {
@@ -35,6 +37,7 @@ export type TalkingHeadAvatarHandle = {
 type TalkingHeadAvatarProps = {
   persona: PersonaAvatarConfig;
   token?: string | null;
+  locale?: Locale;
   onReady?: () => void;
   onSpeakingChange?: (speaking: boolean) => void;
   onError?: (message: string) => void;
@@ -55,6 +58,7 @@ export const TalkingHeadAvatar = forwardRef<TalkingHeadAvatarHandle, TalkingHead
     {
       persona,
       token,
+      locale = "tr",
       onReady,
       onSpeakingChange,
       onError,
@@ -63,6 +67,7 @@ export const TalkingHeadAvatar = forwardRef<TalkingHeadAvatarHandle, TalkingHead
     },
     ref
   ) {
+    const t = useT();
     const containerRef = useRef<HTMLDivElement | null>(null);
     const headRef = useRef<TalkingHeadInternal | null>(null);
     const readyRef = useRef(false);
@@ -70,12 +75,14 @@ export const TalkingHeadAvatar = forwardRef<TalkingHeadAvatarHandle, TalkingHead
     const onReadyRef = useRef(onReady);
     const onErrorRef = useRef(onError);
     const tokenRef = useRef(token);
+    const localeRef = useRef(locale);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
 
     onReadyRef.current = onReady;
     onErrorRef.current = onError;
     tokenRef.current = token;
+    localeRef.current = locale;
 
     const markReady = () => {
       readyRef.current = true;
@@ -185,7 +192,7 @@ export const TalkingHeadAvatar = forwardRef<TalkingHeadAvatarHandle, TalkingHead
         } catch (error) {
           if (cancelled) return;
           const message =
-            error instanceof Error ? error.message : "3D avatar yüklenemedi.";
+            error instanceof Error ? error.message : t("talk.errorAvatarLoadFailed");
           markFailed(message);
         }
       };
@@ -208,12 +215,12 @@ export const TalkingHeadAvatar = forwardRef<TalkingHeadAvatarHandle, TalkingHead
         const waiters = readyWaitersRef.current.splice(0);
         waiters.forEach((resolve) => resolve(false));
       };
-    }, [persona.glbUrl, persona.body, persona.mood, persona.backgroundUrl]);
+    }, [persona.glbUrl, persona.body, persona.mood, persona.backgroundUrl, t]);
 
     const speakWithAvatar = async (text: string) => {
       const head = headRef.current;
       if (!head || !readyRef.current) {
-        throw new Error("Avatar henüz hazır değil.");
+        throw new Error(t("talk.errorAvatarNotReady"));
       }
 
       const plain = speakableText(text);
@@ -226,14 +233,16 @@ export const TalkingHeadAvatar = forwardRef<TalkingHeadAvatarHandle, TalkingHead
 
         const authToken = tokenRef.current;
         if (!authToken) {
-          throw new Error("TTS için oturum yok");
+          throw new Error(t("talk.errorTtsSession"));
         }
 
+        const speechLocale = localeRef.current;
         const arrayBuffer = await fetchOpenAiTtsArrayBuffer(plain, authToken, {
           voice: persona.ttsVoice,
           accent: persona.accent,
           speed: persona.ttsSpeed,
           gender: persona.body,
+          locale: speechLocale,
         });
         const audioBuffer = await head.audioCtx.decodeAudioData(arrayBuffer.slice(0));
         const durationMs = Math.max(400, Math.round(audioBuffer.duration * 1000));
@@ -269,7 +278,8 @@ export const TalkingHeadAvatar = forwardRef<TalkingHeadAvatarHandle, TalkingHead
       } catch {
         head.stopSpeaking();
         clearAudioDrivenMouth(head);
-        await speakWithBrowserTts(plain, "tr-TR", persona.body);
+        const browserLang = localeRef.current === "en" ? "en-US" : "tr-TR";
+        await speakWithBrowserTts(plain, browserLang, persona.body);
       } finally {
         clearAudioDrivenMouth(head);
         onSpeakingChange?.(false);
@@ -342,7 +352,7 @@ export const TalkingHeadAvatar = forwardRef<TalkingHeadAvatarHandle, TalkingHead
               isTile ? "" : "rounded-3xl"
             }`}
           >
-            Avatar yükleniyor…
+            {t("talk.avatarLoading")}
           </div>
         )}
         {loadError && (

@@ -2,6 +2,7 @@
 
 import { Keyboard, LogOut, Mic, Phone, Volume2 } from "lucide-react";
 import Link from "next/link";
+import { useT } from "@/lib/i18n/preferences-context";
 
 type PresenceCallControlsProps = {
   conversationStarted: boolean;
@@ -28,6 +29,8 @@ export function PresenceCallControls({
   onReplayOpening,
   onToggleManualInput,
 }: PresenceCallControlsProps) {
+  const t = useT();
+
   return (
     <footer className="presence-controls z-30 shrink-0 border-t border-white/10 bg-[#111111]/95 px-4 py-3 backdrop-blur-md sm:px-6">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-2 sm:gap-3">
@@ -40,32 +43,32 @@ export function PresenceCallControls({
               onClick={onJoin}
             >
               <Phone size={16} />
-              {avatarReady ? "Odaya katıl" : "Avatar yükleniyor…"}
+              {avatarReady ? t("presence.joinReady") : t("presence.avatarLoading")}
             </button>
             <Link
               href={leaveHref}
               className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-4 py-3 text-sm font-medium text-slate-200 transition hover:bg-white/10"
             >
               <LogOut size={16} />
-              Çıkış
+              {t("presence.exit")}
             </Link>
           </>
         ) : (
           <>
             <ControlButton
-              label={phase === "listening" ? "Mikrofon açık" : "Mikrofon"}
+              label={phase === "listening" ? t("presence.micOpen") : t("presence.mic")}
               active={phase === "listening"}
               statusOnly
               icon={<Mic size={18} />}
             />
             <ControlButton
-              label="Tekrar dinle"
+              label={t("presence.replay")}
               disabled={loading || isSpeaking || phase === "processing"}
               onClick={onReplayOpening}
               icon={<Volume2 size={18} />}
             />
             <ControlButton
-              label={showManualInput ? "Klavyeyi gizle" : "Yazarak sor"}
+              label={showManualInput ? t("presence.hideKeyboard") : t("presence.typeQuestion")}
               active={showManualInput}
               onClick={onToggleManualInput}
               icon={<Keyboard size={18} />}
@@ -75,7 +78,7 @@ export function PresenceCallControls({
               className="inline-flex items-center gap-2 rounded-full border border-rose-400/40 bg-rose-500/15 px-4 py-2.5 text-sm font-medium text-rose-100 transition hover:bg-rose-500/25"
             >
               <LogOut size={16} />
-              Ayrıl
+              {t("presence.leave")}
             </Link>
           </>
         )}

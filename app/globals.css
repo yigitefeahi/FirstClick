@@ -5,6 +5,29 @@
 :root {
   --background: #f4f7fa;
   --foreground: #0c1222;
+  --lab-ink: #0c1222;
+  --lab-mist: #e8eef4;
+  --lab-steel: #94a3b8;
+  --lab-chalk: #f4f7fa;
+  --lab-signal: #c8f542;
+  --surface: #ffffff;
+  --surface-muted: rgba(255, 255, 255, 0.85);
+  --border-subtle: rgba(226, 232, 240, 0.8);
+  --header-bg: rgba(244, 247, 250, 0.85);
+}
+
+.dark {
+  --background: #0b0f17;
+  --foreground: #e8eef4;
+  --lab-ink: #e8eef4;
+  --lab-mist: #1a2233;
+  --lab-steel: #94a3b8;
+  --lab-chalk: #121826;
+  --lab-signal: #c8f542;
+  --surface: #151b27;
+  --surface-muted: #121826;
+  --border-subtle: rgba(148, 163, 184, 0.18);
+  --header-bg: rgba(11, 15, 23, 0.88);
 }
 
 body {
@@ -14,6 +37,14 @@ body {
     radial-gradient(900px 500px at 100% 0%, rgba(200, 245, 66, 0.06), transparent 50%),
     var(--background);
   font-family: var(--font-sans), system-ui, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.dark body {
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(13, 148, 136, 0.12), transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, rgba(200, 245, 66, 0.05), transparent 50%),
+    var(--background);
 }
 
 @layer utilities {
@@ -28,10 +59,26 @@ body {
     background-size: 28px 28px;
   }
 
+  .dark .lab-grid {
+    background-image:
+      linear-gradient(to right, rgba(232, 238, 244, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(232, 238, 244, 0.05) 1px, transparent 1px);
+  }
+
   .font-display {
     font-family: var(--font-display), system-ui, sans-serif;
   }
+
+  .landing-snap {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .landing-snap::-webkit-scrollbar {
+    display: none;
+  }
 }
+
 
 /* Presence — persona talk room */
 .presence-room {

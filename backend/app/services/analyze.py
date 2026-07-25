@@ -5,8 +5,9 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any, Literal
 
 from app.config import settings
-from app.constants import PERSONA_LABELS
+from app.constants import persona_label_for_locale
 from app.rag.ingest import ingest_analysis_result
+from app.rag.knowledge import kb_title_for_slug
 from app.rag.retrieve import RetrievedChunk, hybrid_retrieve
 from app.schemas.analysis import AnalysisFormData, AnalysisResult, AnalyzeResponse, RagSource
 from app.services.mock_analyzer import generate_mock_analysis
@@ -40,8 +41,10 @@ async def _load_custom_personas(user_id: str, form: AnalysisFormData) -> dict[st
         .in_("id", custom_ids)
         .execute()
     )
+    locale = (form.locale or "tr").lower()
+    default_name = "Custom persona" if locale == "en" else "Özel persona"
     return {
-        row["id"]: {"name": row.get("name") or "Özel persona", "traits": row.get("traits") or ""}
+        row["id"]: {"name": row.get("name") or default_name, "traits": row.get("traits") or ""}
         for row in (response.data or [])
     }
 
@@ -64,7 +67,12 @@ async def run_analysis(
         except Exception as exc:
             logger.warning("custom personas load failed: %s", exc)
 
-    await emit({"type": "stage", "message": "Kaynaklar taranıyor…"})
+    locale = (form.locale or "tr").lower()
+    if locale not in ("tr", "en"):
+        locale = "tr"
+
+    # Machine keys only for UI chrome — FE must t(key); message is legacy fallback
+    await emit({"type": "stage", "key": "scanning"})
 
     if user_id and settings.supabase_configured and settings_openai_available():
         try:
@@ -78,13 +86,30 @@ async def run_analysis(
             logger.warning("RAG retrieve failed: %s", exc)
 
     titles: list[str] = []
+    slugs: list[str] = []
     for chunk in rag_chunks:
         meta = chunk.metadata or {}
-        title = meta.get("title") or meta.get("slug") or chunk.citation
+        slug = meta.get("slug")
+        raw_title = meta.get("title") or meta.get("slug") or chunk.citation
+        if slug:
+            slug_s = str(slug)
+            if slug_s not in slugs:
+                slugs.append(slug_s)
+            # Evidence titles always TR (UI chrome may still remap elsewhere)
+            title = kb_title_for_slug(slug_s, "tr", str(raw_title) if raw_title else None)
+        else:
+            title = str(raw_title) if raw_title else None
         if title and title not in titles:
-            titles.append(str(title))
-    await emit({"type": "rag", "count": len(rag_chunks), "titles": titles[:8]})
-    await emit({"type": "stage", "message": "Personalar simüle ediliyor…"})
+            titles.append(title)
+    await emit(
+        {
+            "type": "rag",
+            "count": len(rag_chunks),
+            "titles": titles[:8],
+            "slugs": slugs[:8],
+        }
+    )
+    await emit({"type": "stage", "key": "simulating"})
 
     if settings_openai_available():
         ai_result = await analyze_with_openai(
@@ -99,12 +124,19 @@ async def run_analysis(
     personas = form.selected_personas[:6]
     total = len(personas)
     for index, persona_id in enumerate(personas, start=1):
-        name = PERSONA_LABELS.get(persona_id, persona_id)
+        name = persona_label_for_locale(persona_id, locale)
         if persona_id.startswith("custom:"):
             info = custom_personas.get(persona_id.removeprefix("custom:"))
             name = (info or {}).get("name") or name
         await emit(
-            {"type": "persona", "status": "running", "index": index, "total": total, "name": name}
+            {
+                "type": "persona",
+                "status": "running",
+                "index": index,
+                "total": total,
+                "name": name,
+                "personaId": persona_id,
+            }
         )
         await emit(
             {
@@ -113,6 +145,7 @@ async def run_analysis(
                 "index": index,
                 "total": total,
                 "name": name,
+                "personaId": persona_id,
                 "ok": True,
             }
         )
@@ -182,14 +215,22 @@ def chunks_to_rag_sources(chunks: list[RetrievedChunk]) -> list[RagSource]:
     sources: list[RagSource] = []
     for chunk in chunks:
         meta = chunk.metadata or {}
+        raw_title = meta.get("title") or meta.get("slug")
+        slug = meta.get("slug")
+        is_kb = chunk.source_type == "knowledge" or chunk.scope == "global"
+        if is_kb and slug:
+            title = kb_title_for_slug(str(slug), "tr", str(raw_title) if raw_title else None)
+        else:
+            title = raw_title
         sources.append(
             RagSource(
                 citation=chunk.citation,
                 source_type=chunk.source_type,
                 excerpt=(chunk.content[:280] + "…") if len(chunk.content) > 280 else chunk.content,
                 scope=chunk.scope,
-                title=meta.get("title") or meta.get("slug"),
+                title=title,
                 category=meta.get("category"),
+                score=round(float(chunk.score), 4) if chunk.score else None,
             )
         )
     return sources

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Loader2, Split } from "lucide-react";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -18,16 +18,21 @@ import { submitAbAnalysis } from "@/lib/api";
 import { useAuth } from "@/lib/supabase/auth-context";
 import type { AnalysisResult } from "@/types/analysis";
 import { cn } from "@/lib/utils";
+import { localizedPersonaLabel } from "@/lib/i18n/persona-labels";
+import { usePreferences, useT } from "@/lib/i18n/preferences-context";
 
 function AbContent() {
   const { getAccessToken } = useAuth();
+  const t = useT();
+  const { locale } = usePreferences();
   const [productName, setProductName] = useState("TaskFlow");
-  const [pitchA, setPitchA] = useState(
-    "Küçük ekipler için görev yönetimi. Tek tıkla kurulum, sprint panosu."
-  );
-  const [pitchB, setPitchB] = useState(
-    "2 dakikada sprint panosu. Kart istemeden 14 gün deneyin — hafif Jira alternatifi."
-  );
+  const [pitchA, setPitchA] = useState("");
+  const [pitchB, setPitchB] = useState("");
+
+  useEffect(() => {
+    setPitchA(t("ab.sample.pitchA"));
+    setPitchB(t("ab.sample.pitchB"));
+  }, [locale, t]);
   const [personas, setPersonas] = useState<string[]>([...DEFAULT_PERSONA_IDS]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +54,7 @@ function AbContent() {
     setError(null);
     try {
       const token = await getAccessToken();
-      if (!token) throw new Error("Oturum gerekli.");
+      if (!token) throw new Error(t("common.errorSessionRequired"));
       const res = await submitAbAnalysis(token, {
         productName,
         pitchA,
@@ -57,6 +62,7 @@ function AbContent() {
         labelA: "Pitch A",
         labelB: "Pitch B",
         selectedPersonas: personas,
+        locale,
       });
       setResultA(res.resultA);
       setResultB(res.resultB);
@@ -64,7 +70,7 @@ function AbContent() {
       setIdA(res.analysisIdA ?? null);
       setIdB(res.analysisIdB ?? null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "A/B başarısız.");
+      setError(err instanceof Error ? err.message : t("common.errorAbFailed"));
     } finally {
       setLoading(false);
     }
@@ -73,18 +79,18 @@ function AbContent() {
   return (
     <div className="space-y-6">
       <form onSubmit={handleSubmit} className="space-y-6">
-        <Card>
+        <Card className="dark:border-white/10 dark:bg-surface">
           <CardHeader>
-            <CardTitle className="font-display text-base">Ürün + iki pitch</CardTitle>
+            <CardTitle className="font-display text-base dark:text-white">{t("ab.formTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Ürün adı</Label>
+              <Label>{t("ab.productName")}</Label>
               <Input value={productName} onChange={(e) => setProductName(e.target.value)} required />
             </div>
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="space-y-2">
-                <Label>Pitch A</Label>
+                <Label>{t("ab.pitchA")}</Label>
                 <Textarea
                   className="min-h-[140px]"
                   value={pitchA}
@@ -93,7 +99,7 @@ function AbContent() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Pitch B</Label>
+                <Label>{t("ab.pitchB")}</Label>
                 <Textarea
                   className="min-h-[140px]"
                   value={pitchB}
@@ -109,24 +115,24 @@ function AbContent() {
                   type="button"
                   onClick={() => togglePersona(p.id)}
                   className={cn(
-                    "rounded-xl border px-3 py-1.5 text-xs",
+                    "rounded-xl border px-3 py-1.5 text-xs transition-colors",
                     personas.includes(p.id)
-                      ? "border-brand-400 bg-brand-50 text-brand-800"
-                      : "border-slate-200 bg-white text-slate-600"
+                      ? "border-brand-400 bg-brand-50 text-brand-800 dark:border-transparent dark:bg-[#0c1222] dark:text-lab-signal dark:ring-1 dark:ring-lab-signal/40"
+                      : "border-slate-200 bg-white text-slate-600 dark:border-transparent dark:bg-[#0c1222] dark:text-slate-400 dark:hover:text-slate-200"
                   )}
                 >
-                  {p.label}
+                  {localizedPersonaLabel(t, p.id)}
                 </button>
               ))}
             </div>
             {error && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
                 {error}
               </div>
             )}
             <Button type="submit" disabled={loading || personas.length === 0}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Split className="h-4 w-4" />}
-              A/B lab’ı çalıştır
+              {t("ab.runLab")}
             </Button>
           </CardContent>
         </Card>
@@ -136,40 +142,40 @@ function AbContent() {
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-3">
             <Badge variant={winner === "tie" ? "neutral" : "success"}>
-              Kazanan: {winner === "tie" ? "Berabere" : `Pitch ${winner}`}
+              {t("ab.winner")}: {winner === "tie" ? t("ab.tie") : `Pitch ${winner}`}
             </Badge>
             {idA && idB && (
               <Link
                 href={`/compare?before=${idA}&after=${idB}`}
-                className="text-sm font-medium text-brand-700"
+                className="text-sm font-medium text-brand-700 dark:text-brand-400"
               >
-                Detaylı karşılaştır →
+                {t("ab.detailedCompare")}
               </Link>
             )}
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             {[
-              { label: "Pitch A", result: resultA, id: idA, win: winner === "A" },
-              { label: "Pitch B", result: resultB, id: idB, win: winner === "B" },
+              { label: t("ab.pitchA"), result: resultA, id: idA, win: winner === "A" },
+              { label: t("ab.pitchB"), result: resultB, id: idB, win: winner === "B" },
             ].map((col) => (
               <Card
                 key={col.label}
-                className={cn(col.win && "ring-2 ring-lab-signal")}
+                className={cn(col.win && "ring-2 ring-lab-signal", "dark:border-white/10 dark:bg-surface")}
               >
                 <CardHeader>
-                  <CardTitle className="font-display text-base">{col.label}</CardTitle>
+                  <CardTitle className="font-display text-base dark:text-white">{col.label}</CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center gap-4">
-                  <ScoreRing score={col.result.overallScore} label="Genel" size="lg" />
-                  <div className="grid w-full grid-cols-2 gap-2 text-center text-xs text-slate-600">
-                    <span>Netlik {col.result.clarityScore}</span>
-                    <span>İstek {col.result.adoptionScore}</span>
-                    <span>Risk {col.result.onboardingRiskScore}</span>
-                    <span>Uyım {col.result.targetFitScore}</span>
+                  <ScoreRing score={col.result.overallScore} label={t("ab.overall")} size="lg" />
+                  <div className="grid w-full grid-cols-2 gap-2 text-center text-xs text-slate-600 dark:text-slate-400">
+                    <span>{t("ab.clarity")} {col.result.clarityScore}</span>
+                    <span>{t("ab.adoption")} {col.result.adoptionScore}</span>
+                    <span>{t("ab.risk")} {col.result.onboardingRiskScore}</span>
+                    <span>{t("ab.fit")} {col.result.targetFitScore}</span>
                   </div>
                   {col.id && (
-                    <Link href={`/results/${col.id}`} className="text-sm text-brand-700">
-                      Tam sonuç
+                    <Link href={`/results/${col.id}`} className="text-sm text-brand-700 dark:text-brand-400">
+                      {t("ab.fullResult")}
                     </Link>
                   )}
                 </CardContent>
@@ -183,6 +189,8 @@ function AbContent() {
 }
 
 export default function AbPage() {
+  const t = useT();
+
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
@@ -193,12 +201,10 @@ export default function AbPage() {
             className="mb-6 inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-brand-700"
           >
             <ArrowLeft className="h-4 w-4" />
-            Analize dön
+            {t("common.backToAnalyze")}
           </Link>
-          <h1 className="font-display text-3xl font-semibold text-lab-ink">A/B pitch lab</h1>
-          <p className="mt-2 text-slate-500">
-            Aynı personalarla iki anlatımı yan yana ölçün — kazananı skorla görün.
-          </p>
+          <h1 className="font-display text-3xl font-semibold text-lab-ink dark:text-white">{t("ab.title")}</h1>
+          <p className="mt-2 text-slate-500 dark:text-slate-400">{t("ab.subtitle")}</p>
           <div className="mt-8">
             <AuthGuard>
               <AbContent />

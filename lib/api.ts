@@ -93,14 +93,15 @@ export async function submitAnalysis(
 }
 
 export type OrchestrationEvent =
-  | { type: "stage"; message: string }
-  | { type: "rag"; count: number; titles: string[] }
+  | { type: "stage"; key?: "scanning" | "simulating"; message?: string }
+  | { type: "rag"; count: number; titles: string[]; slugs?: string[] }
   | {
       type: "persona";
       status: "running" | "done";
       index: number;
       total: number;
       name: string;
+      personaId?: string;
       ok?: boolean;
     }
   | { type: "synthesis"; status: "running" | "done" }
@@ -382,12 +383,13 @@ export async function deleteCustomPersona(token: string, id: string): Promise<vo
 export async function compareAnalyses(
   token: string,
   beforeId: string,
-  afterId: string
+  afterId: string,
+  locale?: "tr" | "en"
 ): Promise<CompareResult> {
   const response = await apiFetch(`${API_BASE}/api/v1/analyses/compare`, {
     method: "POST",
     headers: await authHeaders(token),
-    body: JSON.stringify({ beforeId, afterId }),
+    body: JSON.stringify({ beforeId, afterId, locale: locale ?? "tr" }),
   });
   await throwIfNotOk(response, "Karşılaştırma başarısız.");
   return response.json();
@@ -404,6 +406,7 @@ export async function askPersonaFollowup(
     productDescription?: string;
     priorPersona?: Record<string, unknown>;
     history?: { role: "user" | "assistant"; content: string }[];
+    locale?: "tr" | "en";
   }
 ): Promise<FollowupResult> {
   const response = await apiFetch(`${API_BASE}/api/v1/followup`, {
@@ -606,6 +609,7 @@ export async function submitAbAnalysis(
     differentiator?: string;
     selectedPersonas: string[];
     productId?: string | null;
+    locale?: "tr" | "en";
   }
 ) {
   const response = await apiFetch(`${API_BASE}/api/v1/analyze/ab`, {

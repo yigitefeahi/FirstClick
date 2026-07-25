@@ -3,10 +3,12 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/supabase/auth-context";
+import { useT } from "@/lib/i18n/preferences-context";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading, configured } = useAuth();
   const router = useRouter();
+  const t = useT();
 
   useEffect(() => {
     if (loading) return;
@@ -18,10 +20,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (!configured) {
     return (
-      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-        Supabase env değişkenleri eksik. Giriş için{" "}
-        <code className="rounded bg-amber-100 px-1">NEXT_PUBLIC_SUPABASE_URL</code> ve{" "}
-        <code className="rounded bg-amber-100 px-1">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> ekleyin.
+      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+        {t("authGuard.supabaseMissing")}
       </div>
     );
   }

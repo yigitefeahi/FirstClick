@@ -50,6 +50,7 @@ class TtsRequest(BaseModel):
     voice: TtsVoice = "coral"
     accent: str | None = None
     speed: float = Field(default=1.12, ge=0.8, le=1.4)
+    locale: Literal["tr", "en"] = "tr"
 
 
 class TtsResponse(BaseModel):
@@ -61,7 +62,18 @@ class TtsResponse(BaseModel):
     model_config = {"populate_by_name": True}
 
 
-def _tts_instructions(accent: str | None) -> str:
+def _tts_instructions(accent: str | None, locale: str = "tr") -> str:
+    if locale == "en":
+        style = (accent or "").strip() or (
+            "Natural, fluent, everyday conversational English."
+        )
+        return (
+            "Speak in natural English. "
+            "Do not sound like a slow robotic assistant or Siri. "
+            "Use a lively conversational pace — slightly brisk, clear, and human. "
+            "Keep product names and technical terms natural. "
+            f"Voice character: {style}"
+        )
     style = (accent or "").strip() or (
         "Doğal, akıcı, günlük konuşma temposunda Türkiye Türkçesi."
     )
@@ -88,6 +100,7 @@ async def _create_speech(
     voice: str,
     accent: str | None,
     speed: float,
+    locale: str = "tr",
 ) -> tuple[str | None, str | None, str | None]:
     if not settings.openai_api_key:
         return None, None, "OpenAI API anahtarı yapılandırılmamış."
@@ -101,7 +114,7 @@ async def _create_speech(
     if voice in _MINI_TTS_ONLY:
         models_to_try = ["gpt-4o-mini-tts"] + [m for m in models_to_try if m != "gpt-4o-mini-tts"]
 
-    instructions = _tts_instructions(accent)
+    instructions = _tts_instructions(accent, locale)
     headers = {
         "Authorization": f"Bearer {settings.openai_api_key}",
         "Content-Type": "application/json",
@@ -150,7 +163,9 @@ async def synthesize_speech(
     if not clean:
         raise HTTPException(status_code=400, detail="Metin boş olamaz.")
 
-    b64, model, error = await _create_speech(clean, body.voice, body.accent, body.speed)
+    b64, model, error = await _create_speech(
+        clean, body.voice, body.accent, body.speed, body.locale
+    )
     if b64:
         return TtsResponse(audio_base64=b64, model=model, fallback=False)
 

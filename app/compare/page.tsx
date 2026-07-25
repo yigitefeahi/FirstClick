@@ -16,10 +16,15 @@ import { compareAnalyses, listAnalyses, type AnalysisSummary } from "@/lib/api";
 import { useAuth } from "@/lib/supabase/auth-context";
 import type { CompareResult } from "@/types/analysis";
 import { cn } from "@/lib/utils";
+import { localeDateTag } from "@/lib/i18n/dictionaries";
+import { usePreferences, useT } from "@/lib/i18n/preferences-context";
 
 function CompareContent() {
   const { getAccessToken } = useAuth();
   const searchParams = useSearchParams();
+  const t = useT();
+  const { locale } = usePreferences();
+  const dateTag = localeDateTag(locale);
   const [items, setItems] = useState<AnalysisSummary[]>([]);
   const [beforeId, setBeforeId] = useState("");
   const [afterId, setAfterId] = useState("");
@@ -34,7 +39,7 @@ function CompareContent() {
     (async () => {
       try {
         const token = await getAccessToken();
-        if (!token) throw new Error("Oturum bulunamadı.");
+        if (!token) throw new Error(t("common.errorSessionNotFound"));
         const data = await listAnalyses(token);
         if (cancelled) return;
         setItems(data);
@@ -48,7 +53,7 @@ function CompareContent() {
           setBeforeId(data[1].id);
         }
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Yüklenemedi.");
+        if (!cancelled) setError(err instanceof Error ? err.message : t("common.errorLoadFailed"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -64,11 +69,11 @@ function CompareContent() {
     setResult(null);
     try {
       const token = await getAccessToken();
-      if (!token) throw new Error("Oturum gerekli.");
-      const data = await compareAnalyses(token, b, a);
+      if (!token) throw new Error(t("common.errorSessionRequired"));
+      const data = await compareAnalyses(token, b, a, locale);
       setResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Karşılaştırma başarısız.");
+      setError(err instanceof Error ? err.message : t("common.errorCompareFailed"));
     } finally {
       setComparing(false);
     }
@@ -91,21 +96,19 @@ function CompareContent() {
   }, [items, beforeId, afterId]);
 
   if (loading) {
-    return <LoadingState label="Karşılaştırma hazırlanıyor…" />;
+    return <LoadingState label={t("compare.loading")} />;
   }
 
   if (items.length < 2) {
     return (
       <EmptyState
-        title={items.length === 0 ? "Karşılaştırılacak test yok" : "İkinci test gerekli"}
+        title={items.length === 0 ? t("compare.emptyNoneTitle") : t("compare.emptyOneTitle")}
         description={
-          items.length === 0
-            ? "Önce bir ürün testi çalıştırın. Sonra pitch’i değiştirip tekrar ölçün — fark burada görünür."
-            : "Aynı ürünü yeniden test edin. v1 → v2 farkı ancak iki kayıtla ölçülür."
+          items.length === 0 ? t("compare.emptyNoneDesc") : t("compare.emptyOneDesc")
         }
         action={
           <Link href="/analyze">
-            <Button>{items.length === 0 ? "İlk testi başlat" : "İkinci testi çalıştır"}</Button>
+            <Button>{items.length === 0 ? t("compare.startFirst") : t("compare.runSecond")}</Button>
           </Link>
         }
       />
@@ -114,43 +117,41 @@ function CompareContent() {
 
   return (
     <div className="space-y-6">
-      <Card className="border-slate-200 bg-white">
+      <Card className="border-slate-200 bg-white dark:border-white/10 dark:bg-surface">
         <CardHeader>
-          <CardTitle className="font-display text-base">İki testi seç</CardTitle>
-          <p className="text-sm text-slate-500">
-            Aynı ürünün v1 → v2 farkını görün: düzeldi, bozuldu, aynı kaldı.
-          </p>
+          <CardTitle className="font-display text-base dark:text-white">{t("compare.selectTitle")}</CardTitle>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{t("compare.selectDesc")}</p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Önce (eski)</label>
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t("compare.beforeLabel")}</label>
               <select
-                className="flex h-11 w-full rounded-xl border border-slate-200 bg-lab-chalk px-3 text-sm"
+                className="flex h-11 w-full rounded-xl border border-slate-200 bg-lab-chalk px-3 text-sm dark:border-white/10 dark:bg-surface dark:text-white"
                 value={beforeId}
                 onChange={(e) => setBeforeId(e.target.value)}
               >
-                <option value="">Seç…</option>
+                <option value="">{t("common.select")}</option>
                 {items.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.productName} · {item.overallScore ?? "—"} ·{" "}
-                    {item.createdAt ? new Date(item.createdAt).toLocaleDateString("tr-TR") : ""}
+                    {item.createdAt ? new Date(item.createdAt).toLocaleDateString(dateTag) : ""}
                   </option>
                 ))}
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Sonra (yeni)</label>
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t("compare.afterLabel")}</label>
               <select
-                className="flex h-11 w-full rounded-xl border border-slate-200 bg-lab-chalk px-3 text-sm"
+                className="flex h-11 w-full rounded-xl border border-slate-200 bg-lab-chalk px-3 text-sm dark:border-white/10 dark:bg-surface dark:text-white"
                 value={afterId}
                 onChange={(e) => setAfterId(e.target.value)}
               >
-                <option value="">Seç…</option>
+                <option value="">{t("common.select")}</option>
                 {items.map((item) => (
                   <option key={`a-${item.id}`} value={item.id}>
                     {item.productName} · {item.overallScore ?? "—"} ·{" "}
-                    {item.createdAt ? new Date(item.createdAt).toLocaleDateString("tr-TR") : ""}
+                    {item.createdAt ? new Date(item.createdAt).toLocaleDateString(dateTag) : ""}
                   </option>
                 ))}
               </select>
@@ -161,10 +162,10 @@ function CompareContent() {
             disabled={comparing || !beforeId || !afterId || beforeId === afterId}
           >
             {comparing ? <Loader2 className="h-4 w-4 animate-spin" /> : <GitCompare className="h-4 w-4" />}
-            Ne değişti?
+            {t("compare.runButton")}
           </Button>
           {error && (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
               {error}
             </div>
           )}
@@ -172,28 +173,28 @@ function CompareContent() {
       </Card>
 
       {timeline.length === 2 && (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-lab-ink text-white">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-[#0c1222] text-white dark:border-white/10">
           <div className="border-b border-white/10 px-6 py-4 sm:px-8">
-            <p className="text-xs uppercase tracking-[0.18em] text-lab-signal">Lab timeline</p>
-            <p className="mt-1 text-sm text-slate-400">Aynı ürün · iki ölçüm · skor farkı</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-lab-signal">{t("compare.timelineKicker")}</p>
+            <p className="mt-1 text-sm text-slate-400">{t("compare.timelineDesc")}</p>
           </div>
           <div className="grid gap-0 sm:grid-cols-[1fr_auto_1fr]">
-            {timeline.map((t, i) => (
-              <div key={t.id} className="contents">
+            {timeline.map((item, i) => (
+              <div key={item.id} className="contents">
                 <div
                   className="animate-delta-slide px-6 py-8 sm:px-8"
                   style={{ animationDelay: `${i * 120}ms` }}
                 >
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                    {i === 0 ? "v1 · önce" : "v2 · sonra"}
+                    {i === 0 ? t("compare.v1") : t("compare.v2")}
                   </p>
                   <p className="mt-2 font-display text-5xl font-semibold tabular-nums text-lab-signal">
-                    {t.overallScore ?? "—"}
+                    {item.overallScore ?? "—"}
                   </p>
-                  <p className="mt-3 text-sm text-slate-300">{t.productName}</p>
-                  {t.createdAt && (
+                  <p className="mt-3 text-sm text-slate-300">{item.productName}</p>
+                  {item.createdAt && (
                     <p className="mt-1 text-xs text-slate-500">
-                      {new Date(t.createdAt).toLocaleString("tr-TR")}
+                      {new Date(item.createdAt).toLocaleString(dateTag)}
                     </p>
                   )}
                 </div>
@@ -216,16 +217,16 @@ function CompareContent() {
             afterScore={items.find((i) => i.id === afterId)?.overallScore}
           />
 
-          <details className="group rounded-2xl border border-slate-200 bg-white">
-            <summary className="cursor-pointer list-none px-6 py-4 text-sm font-medium text-slate-700 marker:content-none">
-              Detaylı skor tablosu ve madde listesi
-              <span className="float-right text-xs text-slate-400 group-open:hidden">Göster</span>
-              <span className="float-right hidden text-xs text-slate-400 group-open:inline">Gizle</span>
+          <details className="group rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-surface">
+            <summary className="cursor-pointer list-none px-6 py-4 text-sm font-medium text-slate-700 marker:content-none dark:text-slate-200">
+              {t("compare.detailsSummary")}
+              <span className="float-right text-xs text-slate-400 group-open:hidden">{t("common.show")}</span>
+              <span className="float-right hidden text-xs text-slate-400 group-open:inline">{t("common.hide")}</span>
             </summary>
-            <div className="space-y-6 border-t border-slate-100 px-6 pb-6 pt-2">
-          <Card>
+            <div className="space-y-6 border-t border-slate-100 px-6 pb-6 pt-2 dark:border-white/10">
+          <Card className="dark:border-white/10 dark:bg-surface">
             <CardHeader>
-              <CardTitle className="font-display text-base">Skor farkları</CardTitle>
+              <CardTitle className="font-display text-base dark:text-white">{t("compare.scoreDeltasTitle")}</CardTitle>
               <p className="text-sm text-slate-500">
                 {result.beforeLabel} → {result.afterLabel}
               </p>
@@ -234,12 +235,24 @@ function CompareContent() {
               {result.scoreDeltas.map((d, i) => (
                 <div
                   key={d.key}
-                  className="flex items-center justify-between rounded-xl border border-slate-100 bg-lab-chalk px-4 py-3 animate-delta-slide"
+                  className="flex items-center justify-between rounded-xl border border-slate-100 bg-lab-chalk px-4 py-3 animate-delta-slide dark:border-white/10"
                   style={{ animationDelay: `${i * 60}ms` }}
                 >
                   <div>
-                    <p className="text-sm font-medium text-slate-800">{d.label}</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-sm font-medium text-slate-800 dark:text-white">
+                      {d.key === "overallScore"
+                        ? t("resultsDash.overallScore")
+                        : d.key === "clarityScore"
+                          ? t("resultsDash.clarity")
+                          : d.key === "adoptionScore"
+                            ? t("resultsDash.adoption")
+                            : d.key === "onboardingRiskScore"
+                              ? t("resultsDash.onboardingRisk")
+                              : d.key === "targetFitScore"
+                                ? t("resultsDash.targetFit")
+                                : d.label}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       {d.before} → {d.after}
                     </p>
                   </div>
@@ -250,15 +263,15 @@ function CompareContent() {
                     {d.delta > 0 ? (
                       <>
                         <TrendingUp className="h-3 w-3" />
-                        düzeldi +{d.delta}
+                        {t("compare.deltaImproved")} +{d.delta}
                       </>
                     ) : d.delta < 0 ? (
                       <>
                         <TrendingDown className="h-3 w-3" />
-                        bozuldu {d.delta}
+                        {t("compare.deltaRegressed")} {d.delta}
                       </>
                     ) : (
-                      "aynı kaldı"
+                      t("compare.deltaUnchanged")
                     )}
                   </Badge>
                 </div>
@@ -267,19 +280,19 @@ function CompareContent() {
           </Card>
 
           <div className="grid gap-4 lg:grid-cols-3">
-            <ChangeList title="Düzeldi" items={result.improved} tone="success" />
-            <ChangeList title="Bozuldu" items={result.regressed} tone="danger" />
-            <ChangeList title="Aynı kaldı" items={result.unchangedRisks} tone="warning" />
+            <ChangeList title={t("compare.improved")} items={result.improved} tone="success" />
+            <ChangeList title={t("compare.regressed")} items={result.regressed} tone="danger" />
+            <ChangeList title={t("compare.unchanged")} items={result.unchangedRisks} tone="warning" />
           </div>
 
-          <Card>
+          <Card className="dark:border-white/10 dark:bg-surface">
             <CardHeader>
-              <CardTitle className="font-display text-base">Özet</CardTitle>
+              <CardTitle className="font-display text-base dark:text-white">{t("common.summary")}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm text-slate-700">
+            <CardContent className="space-y-3 text-sm text-slate-700 dark:text-slate-300">
               <p className="leading-relaxed">{result.narrative}</p>
-              <p className="rounded-xl bg-brand-50 px-4 py-3 text-brand-950">
-                <span className="font-medium">Öneri: </span>
+              <p className="rounded-xl bg-brand-50 px-4 py-3 text-brand-900 dark:bg-black dark:text-lab-signal">
+                <span className="font-medium">{t("common.recommendation")}: </span>
                 {result.recommendation}
               </p>
             </CardContent>
@@ -302,16 +315,20 @@ function ChangeList({
   tone: "success" | "danger" | "warning";
 }) {
   const bg =
-    tone === "success" ? "bg-emerald-50" : tone === "danger" ? "bg-red-50" : "bg-amber-50";
+    tone === "success"
+      ? "bg-emerald-50 dark:bg-emerald-500/10"
+      : tone === "danger"
+        ? "bg-red-50 dark:bg-red-500/10"
+        : "bg-amber-50 dark:bg-amber-500/10";
   return (
-    <Card>
+    <Card className="dark:border-white/10 dark:bg-surface">
       <CardHeader>
-        <CardTitle className="font-display text-base">{title}</CardTitle>
+        <CardTitle className="font-display text-base dark:text-white">{title}</CardTitle>
       </CardHeader>
       <CardContent>
         <ul className="space-y-2">
           {(items.length ? items : ["—"]).map((item, i) => (
-            <li key={i} className={cn("rounded-lg px-3 py-2 text-sm text-slate-700", bg)}>
+            <li key={i} className={cn("rounded-lg px-3 py-2 text-sm text-slate-700 dark:text-slate-300", bg)}>
               {item}
             </li>
           ))}
@@ -322,6 +339,8 @@ function ChangeList({
 }
 
 export default function ComparePage() {
+  const t = useT();
+
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
@@ -332,15 +351,13 @@ export default function ComparePage() {
             className="mb-6 inline-flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-brand-700"
           >
             <ArrowLeft className="h-4 w-4" />
-            Geçmişe dön
+            {t("common.backToHistory")}
           </Link>
           <div className="mb-8">
-            <h1 className="font-display text-3xl font-semibold tracking-tight text-lab-ink">
-              Ne değişti?
+            <h1 className="font-display text-3xl font-semibold tracking-tight text-lab-ink dark:text-white">
+              {t("compare.title")}
             </h1>
-            <p className="mt-2 text-slate-500">
-              FirstClick’in kalbi: aynı ürünü tekrar test edip farkı ölç.
-            </p>
+            <p className="mt-2 text-slate-500 dark:text-slate-400">{t("compare.subtitle")}</p>
           </div>
           <AuthGuard>
             <Suspense

@@ -17,9 +17,9 @@ const SIZES = {
 
 function getScoreColor(score: number, invert: boolean) {
   const display = invert ? 100 - score : score;
-  if (display >= 70) return { stroke: "#10b981", text: "text-emerald-600" };
-  if (display >= 45) return { stroke: "#f59e0b", text: "text-amber-600" };
-  return { stroke: "#f43f5e", text: "text-rose-600" };
+  if (display >= 70) return { stroke: "#10b981", text: "text-emerald-600 dark:text-emerald-400" };
+  if (display >= 45) return { stroke: "#f59e0b", text: "text-amber-600 dark:text-amber-400" };
+  return { stroke: "#f43f5e", text: "text-rose-600 dark:text-rose-400" };
 }
 
 export function ScoreRing({ score, label, size = "md", className, invert = false }: ScoreRingProps) {
@@ -65,7 +65,7 @@ export function ScoreRing({ score, label, size = "md", className, invert = false
           <span className={cn("font-bold tabular-nums", fontSize, colors.text)}>{clamped}</span>
         </div>
       </div>
-      <span className="text-center text-xs font-medium text-slate-600">{label}</span>
+      <span className="text-center text-xs font-medium text-slate-600 dark:text-slate-300">{label}</span>
     </div>
   );
 }

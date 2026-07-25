@@ -19,7 +19,10 @@ interface AuthContextValue {
   configured: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string) => Promise<{ error: string | null }>;
-  signInWithOAuth: (provider: "google" | "github") => Promise<{ error: string | null }>;
+  signInWithOAuth: (
+    provider: "google" | "github",
+    options?: { next?: string }
+  ) => Promise<{ error: string | null }>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
   updatePassword: (password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -88,16 +91,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null };
   }, []);
 
-  const signInWithOAuth = useCallback(async (provider: "google" | "github") => {
-    const supabase = getSupabaseBrowserClient();
-    if (!supabase) return { error: "Supabase yapılandırılmamış." };
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: `${origin}/analyze` },
-    });
-    return { error: error?.message ?? null };
-  }, []);
+  const signInWithOAuth = useCallback(
+    async (provider: "google" | "github", options?: { next?: string }) => {
+      const supabase = getSupabaseBrowserClient();
+      if (!supabase) return { error: "Supabase yapılandırılmamış." };
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const nextPath = options?.next?.startsWith("/") ? options.next : "/analyze";
+      const redirectTo = origin
+        ? `${origin}/auth/callback?next=${encodeURIComponent(nextPath)}`
+        : undefined;
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: redirectTo ? { redirectTo, skipBrowserRedirect: false } : undefined,
+      });
+      return { error: error?.message ?? null };
+    },
+    []
+  );
 
   const resetPassword = useCallback(async (email: string) => {
     const supabase = getSupabaseBrowserClient();

@@ -5,6 +5,7 @@ import { Check, Copy, FileText, Link2, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createShareLink } from "@/lib/api";
 import { useAuth } from "@/lib/supabase/auth-context";
+import { usePreferences, useT } from "@/lib/i18n/preferences-context";
 import type { AnalysisResult } from "@/types/analysis";
 
 export function ExportShareActions({
@@ -17,24 +18,28 @@ export function ExportShareActions({
   analysisId?: string | null;
 }) {
   const { getAccessToken } = useAuth();
+  const t = useT();
+  const { tp } = usePreferences();
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const name = productName || "Ürün";
-  const summary = `${name} — FirstClick lab skoru ${result.overallScore}/100. Bu hafta: ${result.actionPlan
-    .slice(0, 2)
-    .join(" · ")}`;
+  const name = productName || t("common.product");
+  const summary = tp("export.summaryLine", {
+    name,
+    score: result.overallScore,
+    actions: result.actionPlan.slice(0, 2).join(" · "),
+  });
 
   async function handleShare(role: "viewer" | "editor") {
     if (!analysisId || analysisId === "demo-public") {
-      setError("Paylaşım için kayıtlı bir analiz gerekir (demo paylaşılamaz).");
+      setError(t("export.shareNeedsSaved"));
       return;
     }
     setError(null);
     try {
       const token = await getAccessToken();
-      if (!token) throw new Error("Paylaşım için giriş yapın.");
+      if (!token) throw new Error(t("export.loginRequired"));
       const link = await createShareLink(token, analysisId, role);
       const url = `${window.location.origin}${link.urlPath}`;
       setShareUrl(url);
@@ -42,23 +47,23 @@ export function ExportShareActions({
       setCopied("share");
       setTimeout(() => setCopied(null), 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Paylaşılamadı.");
+      setError(err instanceof Error ? err.message : t("export.failed"));
     }
   }
 
   async function copyNotion() {
     const md = [
-      `# ${name} — FirstClick lab`,
+      `# ${tp("export.notionTitle", { name })}`,
       ``,
-      `**Skor:** ${result.overallScore}/100`,
+      tp("export.notionScore", { score: result.overallScore }),
       ``,
-      `## Bu hafta aksiyonlar`,
+      t("export.notionActionsHeading"),
       ...result.actionPlan.map((a, i) => `${i + 1}. ${a}`),
       ``,
-      `## Kör noktalar`,
+      t("export.notionBlindSpotsHeading"),
       ...result.blindSpots.map((b) => `- ${b}`),
       ``,
-      `## Geliştirilmiş pitch`,
+      t("export.notionPitchHeading"),
       result.improvedPitch,
     ].join("\n");
     await navigator.clipboard.writeText(md);
@@ -80,18 +85,18 @@ export function ExportShareActions({
     <div className="flex flex-wrap items-center gap-2">
       <Button type="button" variant="outline" size="sm" onClick={() => handleShare("viewer")}>
         <Share2 className="h-4 w-4" />
-        {copied === "share" ? "Link kopyalandı" : "Paylaş (viewer)"}
+        {copied === "share" ? t("export.linkCopied") : t("export.shareViewer")}
       </Button>
       <Button type="button" variant="outline" size="sm" onClick={() => handleShare("editor")}>
         <Link2 className="h-4 w-4" />
-        Editor link
+        {t("export.editorLink")}
       </Button>
       <Button type="button" variant="outline" size="sm" onClick={copyNotion}>
         {copied === "notion" ? <Check className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
-        Notion’a kopyala
+        {t("export.copyNotion")}
       </Button>
       <Button type="button" variant="outline" size="sm" onClick={shareLinkedIn}>
-        LinkedIn
+        {t("export.linkedin")}
       </Button>
       <Button
         type="button"
@@ -104,11 +109,13 @@ export function ExportShareActions({
         }}
       >
         <Copy className="h-4 w-4" />
-        {copied === "summary" ? "Kopyalandı" : "Özet"}
+        {copied === "summary" ? t("export.copied") : t("export.summary")}
       </Button>
-      {error && <p className="w-full text-xs text-red-600">{error}</p>}
+      {error && <p className="w-full text-xs text-red-600 dark:text-red-400">{error}</p>}
       {shareUrl && (
-        <p className="w-full truncate font-mono text-[11px] text-slate-500">{shareUrl}</p>
+        <p className="w-full truncate font-mono text-[11px] text-slate-500 dark:text-slate-400">
+          {shareUrl}
+        </p>
       )}
     </div>
   );

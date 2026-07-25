@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
 
 from app.rag.embed import embed_query
+from app.rag.knowledge import filter_kb_rows_by_locale, knowledge_file_fallback, normalize_kb_locale
 from app.schemas.analysis import AnalysisFormData
 from app.services.supabase_client import get_supabase
 
@@ -23,15 +25,22 @@ class RetrievedChunk:
     scope: str = "user"
 
 
+_TOPIC_BIAS = {
+    "tr": "onboarding dönüşüm fiyatlandırma güven netlik aktivasyon bırakma",
+    "en": "onboarding conversion pricing trust clarity drop-off activation",
+}
+
+
 def build_search_query(form: AnalysisFormData, persona_id: str | None = None) -> str:
+    locale = normalize_kb_locale(getattr(form, "locale", None))
     parts = [
         form.product_name,
         form.product_description,
         form.target_audience,
         form.core_features,
         form.differentiator,
-        # Bias retrieval toward FirstClick knowledge topics
-        "onboarding conversion pricing trust clarity drop-off activation",
+        # Locale-matched topic bias so EN embeddings don't dominate TR retrieval
+        _TOPIC_BIAS[locale],
     ]
     if persona_id:
         parts.append(persona_id.replace("-", " "))
@@ -134,6 +143,71 @@ def _split_ranks(rows: list[dict]) -> tuple[list[dict], list[dict]]:
     return vector_ranked, text_ranked
 
 
+def _tokenize(text: str) -> set[str]:
+    return {w for w in re.findall(r"[a-zA-ZçğıöşüÇĞİÖŞÜ0-9]{3,}", (text or "").lower())}
+
+
+def _keyword_score(content: str, query_tokens: set[str]) -> float:
+    if not query_tokens or not content:
+        return 0.0
+    tokens = _tokenize(content)
+    if not tokens:
+        return 0.0
+    return float(len(query_tokens & tokens))
+
+
+def _keyword_fetch_user_rows(
+    client,
+    *,
+    user_id: str,
+    product_id: str | None,
+    source_type: str,
+    query_text: str,
+    count: int,
+) -> list[dict]:
+    """Fallback when embeddings/RPC unavailable: scan product chunks and rank by keywords."""
+    try:
+        query = (
+            client.table("chunks")
+            .select("id, content, source_type, product_id, document_id, analysis_id, metadata, scope")
+            .eq("user_id", user_id)
+            .eq("scope", "user")
+            .eq("source_type", source_type)
+            .limit(120)
+        )
+        if product_id:
+            query = query.eq("product_id", product_id)
+        response = query.execute()
+    except Exception as exc:
+        logger.warning("keyword chunk fetch failed (%s): %s", source_type, exc)
+        return []
+
+    query_tokens = _tokenize(query_text)
+    ranked: list[tuple[float, dict]] = []
+    for row in response.data or []:
+        content = row.get("content") or ""
+        score = _keyword_score(content, query_tokens)
+        if score <= 0:
+            # Prefer surfacing uploaded product docs/web even without lexical overlap
+            if source_type in ("document", "web"):
+                score = 0.1
+            else:
+                continue
+        ranked.append(
+            (
+                score,
+                {
+                    **row,
+                    "vector_score": 0.0,
+                    "text_score": score,
+                    "scope": row.get("scope") or "user",
+                },
+            )
+        )
+    ranked.sort(key=lambda item: item[0], reverse=True)
+    return [row for _, row in ranked[:count]]
+
+
 async def hybrid_retrieve(
     *,
     user_id: str,
@@ -143,20 +217,22 @@ async def hybrid_retrieve(
     top_k: int = 10,
 ) -> list[RetrievedChunk]:
     client = get_supabase()
-    if client is None:
-        return []
-
-    query_text = build_search_query(form, persona_id)
+    # Always retrieve Turkish KB for evidence; product docs stay as uploaded.
+    locale = "tr"
+    form_for_query = form.model_copy(update={"locale": "tr"})
+    query_text = build_search_query(form_for_query, persona_id)
     if not query_text.strip():
         return []
 
+    embedding: list[float] | None = None
     try:
         embedding = await embed_query(query_text)
     except Exception as exc:
-        logger.warning("RAG embed failed, skipping retrieval: %s", exc)
-        return []
+        logger.warning("RAG embed failed, using keyword/file fallback: %s", exc)
 
     def fetch(*, scope: str, source_type: str | None, count: int) -> list[dict]:
+        if client is None or embedding is None:
+            return []
         try:
             params = {
                 "query_embedding": embedding,
@@ -173,12 +249,63 @@ async def hybrid_retrieve(
             logger.warning("match_chunks failed (scope=%s type=%s): %s", scope, source_type, exc)
             return []
 
-    # User corpus
+    # User corpus (vector+keyword RPC when possible) — language left as uploaded
     doc_rows = fetch(scope="user", source_type="document", count=top_k)
     web_rows = fetch(scope="user", source_type="web", count=top_k)
     analysis_rows = fetch(scope="user", source_type="analysis", count=top_k)
-    # Our global knowledge
-    kb_rows = fetch(scope="global", source_type="knowledge", count=top_k)
+    # FirstClick expertise — over-fetch then filter (RPC has no language arg)
+    kb_rows = filter_kb_rows_by_locale(
+        fetch(scope="global", source_type="knowledge", count=max(top_k * 6, 24)),
+        locale,
+    )
+
+    # Keyword fallback for user corpus when RPC/embed returned nothing
+    if client is not None:
+        if not doc_rows:
+            doc_rows = _keyword_fetch_user_rows(
+                client,
+                user_id=user_id,
+                product_id=product_id,
+                source_type="document",
+                query_text=query_text,
+                count=top_k,
+            )
+        if not web_rows:
+            web_rows = _keyword_fetch_user_rows(
+                client,
+                user_id=user_id,
+                product_id=product_id,
+                source_type="web",
+                query_text=query_text,
+                count=top_k,
+            )
+        if not analysis_rows:
+            analysis_rows = _keyword_fetch_user_rows(
+                client,
+                user_id=user_id,
+                product_id=product_id,
+                source_type="analysis",
+                query_text=query_text,
+                count=min(top_k, 4),
+            )
+
+    # File-based KB when global table empty / wrong-locale / thin after filter
+    min_kb = max(3, top_k // 2)
+    if len(kb_rows) < min_kb:
+        file_rows = knowledge_file_fallback(
+            query_text,
+            top_k=min_kb,
+            locale=locale,
+        )
+        seen_ids = {str(r.get("id")) for r in kb_rows}
+        for row in file_rows:
+            rid = str(row.get("id"))
+            if rid in seen_ids:
+                continue
+            kb_rows.append(row)
+            seen_ids.add(rid)
+            if len(kb_rows) >= min_kb:
+                break
 
     lists: list[list[dict]] = []
     for rows in (doc_rows, web_rows, analysis_rows, kb_rows):
@@ -187,6 +314,9 @@ async def hybrid_retrieve(
             lists.append(v)
         if t:
             lists.append(t)
+        # File/keyword rows may only have text_score; keep raw list if split empty
+        if not v and not t and rows:
+            lists.append(rows)
 
     if not lists:
         return []
@@ -196,14 +326,22 @@ async def hybrid_retrieve(
     return _diversify(retrieved, top_k)
 
 
-def format_rag_context(chunks: list[RetrievedChunk]) -> str:
+def format_rag_context(chunks: list[RetrievedChunk], *, locale: str | None = "tr") -> str:
     if not chunks:
         return ""
-    lines = [
-        "Retrieved Context (alıntılara dayan, uydurma):",
-        "- [kb:…] = FirstClick uzmanlık bilgisi (bizim corpus)",
-        "- [doc:…]/[web:…]/[past:…] = kullanıcının ürün corpus’u",
-    ]
+    loc = normalize_kb_locale(locale)
+    if loc == "en":
+        lines = [
+            "Retrieved Context (ground claims in these excerpts; do not invent sources):",
+            "- [kb:…] = FirstClick expertise (our global corpus)",
+            "- [doc:…]/[web:…]/[past:…] = user's product corpus",
+        ]
+    else:
+        lines = [
+            "Retrieved Context (alıntılara dayan, uydurma):",
+            "- [kb:…] = FirstClick uzmanlık bilgisi (bizim corpus)",
+            "- [doc:…]/[web:…]/[past:…] = kullanıcının ürün corpus’u",
+        ]
     for chunk in chunks:
         scope_label = "global-kb" if chunk.scope == "global" or chunk.source_type == "knowledge" else "user"
         lines.append(f"[{chunk.citation}] ({chunk.source_type}/{scope_label})\n{chunk.content}")

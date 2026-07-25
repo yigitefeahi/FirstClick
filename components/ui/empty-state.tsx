@@ -17,15 +17,20 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-white/70 px-6 py-12 text-center",
+        "flex flex-col items-center gap-3 rounded-2xl border border-dashed border-slate-200 px-6 py-12 text-center dark:border-white/15",
         className
       )}
+      style={{ backgroundColor: "var(--surface)" }}
     >
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-lab-ink text-lab-signal">
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#0c1222] text-lab-signal">
         <FlaskConical className="h-5 w-5" />
       </div>
-      <p className="font-display text-lg font-semibold text-lab-ink">{title}</p>
-      {description ? <p className="max-w-sm text-sm text-slate-500">{description}</p> : null}
+      <p className="font-display text-lg font-semibold" style={{ color: "var(--lab-ink)" }}>
+        {title}
+      </p>
+      {description ? (
+        <p className="max-w-sm text-sm text-slate-500 dark:text-slate-400">{description}</p>
+      ) : null}
       {action}
     </div>
   );
@@ -34,8 +39,8 @@ export function EmptyState({
 export function LoadingState({ label = "Yükleniyor…" }: { label?: string }) {
   return (
     <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
-      <p className="text-sm text-slate-500">{label}</p>
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-600 border-t-transparent dark:border-brand-400 dark:border-t-transparent" />
+      <p className="text-sm text-slate-500 dark:text-slate-400">{label}</p>
     </div>
   );
 }

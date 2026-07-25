@@ -1,12 +1,52 @@
-__pycache__/
-*.pyc
-*.pyo
-backend/.venv/
+# Dependencies & virtualenvs
 node_modules/
+backend/.venv/
+.venv/
+venv/
+
+# Next.js / build
 .next/
+out/
+dist/
+build/
+*.tsbuildinfo
 next-env.d.ts
+
+# Secrets — NEVER commit these
 .env
 .env.local
 .env*.local
+backend/.env
+supabase/.env
+*.pem
+*.key
+credentials.json
+service-account*.json
+
+# Keep examples (safe templates)
+!.env.example
+!backend/.env.example
+!supabase/.env.example
+
+# OS / editor
 .DS_Store
 Thumbs.db
+.cursor/
+.vscode/
+.idea/
+
+# Local tools & caches
+.tools/
+__pycache__/
+*.pyc
+*.pyo
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+coverage/
+.turbo/
+
+# Logs
+*.log
+npm-debug.log*

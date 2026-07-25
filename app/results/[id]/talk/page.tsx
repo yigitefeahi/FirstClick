@@ -20,10 +20,17 @@ import {
   type PersonaAvatarConfig,
 } from "@/lib/persona-avatars";
 import { createSpeechEndDetector } from "@/lib/presence/speech-end-detector";
+import { requestCameraAndMic } from "@/lib/presence/request-media-access";
 import { safeText, stripCitationTags } from "@/lib/presence/safe-text";
 import { usePresenceWebcam } from "@/lib/presence/use-presence-webcam";
 import { useAuth } from "@/lib/supabase/auth-context";
+import { localizedPersonaDisplayName, localizedPersonaLabel, localizedPersonaTagline } from "@/lib/i18n/persona-labels";
+import { translate } from "@/lib/i18n/dictionaries";
+import { usePreferences, useT } from "@/lib/i18n/preferences-context";
 import type { AnalysisFormData, AnalysisResult, PersonaAnalysis } from "@/types/analysis";
+
+/** Talk conversation text is always Turkish regardless of UI language. */
+const tTalk = (key: string) => translate("tr", key);
 
 type ConversationPhase =
   | "idle"
@@ -40,21 +47,25 @@ function formatCallDuration(totalSeconds: number): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
-function phaseLabel(phase: ConversationPhase, confirmOpen: boolean): string {
+function phaseLabel(
+  phase: ConversationPhase,
+  confirmOpen: boolean,
+  t: (key: string) => string
+): string {
   if (confirmOpen && phase === "listening") {
-    return "Onay — gönder veya konuşmaya devam et";
+    return t("talk.phase.confirm");
   }
   switch (phase) {
     case "idle":
-      return "Katılmak için hazır";
+      return t("talk.phase.idle");
     case "booting":
-      return "Odaya bağlanılıyor…";
+      return t("talk.phase.booting");
     case "persona_speaking":
-      return "Persona konuşuyor";
+      return t("talk.phase.personaSpeaking");
     case "listening":
-      return "Sıra sizde — sorunuzu söyleyin";
+      return t("talk.phase.listening");
     case "processing":
-      return "Persona yanıt hazırlıyor…";
+      return t("talk.phase.processing");
     default:
       return "";
   }
@@ -64,6 +75,9 @@ function PersonaTalkContent() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const { getAccessToken } = useAuth();
+  const t = useT();
+  const { locale, tp } = usePreferences();
+  const speechLang = locale === "en" ? "en-US" : "tr-TR";
 
   const [loadingAnalysis, setLoadingAnalysis] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -84,6 +98,7 @@ function PersonaTalkContent() {
   const [manualQuestion, setManualQuestion] = useState("");
   const [showManualInput, setShowManualInput] = useState(false);
   const [micError, setMicError] = useState<string | null>(null);
+  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
   const [callSeconds, setCallSeconds] = useState(0);
   const [answerConfirmOpen, setAnswerConfirmOpen] = useState(false);
   const [pendingQuestion, setPendingQuestion] = useState("");
@@ -95,6 +110,7 @@ function PersonaTalkContent() {
   const detectorRef = useRef<ReturnType<typeof createSpeechEndDetector> | null>(null);
   const phaseRef = useRef<ConversationPhase>("idle");
   const processingRef = useRef(false);
+  const micGrantedRef = useRef(false);
 
   useEffect(() => {
     phaseRef.current = phase;
@@ -114,37 +130,37 @@ function PersonaTalkContent() {
           const token = await getAccessToken();
           setAccessToken(token);
 
-          const personas = buildTalkPersonas(analysis);
+          const personas = buildTalkPersonas(analysis, t);
           const preferred =
             personas.find((p) => p.name === initialPersona)?.name ??
             personas[0]?.name ??
             "";
           setActivePersonaName(preferred);
-          setAvatarConfig(getAvatarConfigForPersona(preferred));
+          setAvatarConfig(getAvatarConfigForPersona(preferred, "tr"));
           return;
         }
 
         const token = await getAccessToken();
-        if (!token) throw new Error("Oturum gerekli.");
+        if (!token) throw new Error(t("common.errorSessionRequired"));
         const detail = await getAnalysis(params.id, token);
         if (cancelled) return;
-        if (!detail.result) throw new Error("Analiz sonucu boş.");
+        if (!detail.result) throw new Error(t("common.errorAnalysisEmpty"));
         const analysis = detail.result as AnalysisResult;
         setResult(analysis);
         setFormData(detail.formData);
         setAnalysisId(detail.id);
         setAccessToken(token);
 
-        const personas = buildTalkPersonas(analysis);
+        const personas = buildTalkPersonas(analysis, t);
         const preferred =
           personas.find((p) => p.name === initialPersona)?.name ??
           personas[0]?.name ??
           "";
         setActivePersonaName(preferred);
-        setAvatarConfig(getAvatarConfigForPersona(preferred));
+        setAvatarConfig(getAvatarConfigForPersona(preferred, "tr"));
       } catch (err) {
         if (!cancelled) {
-          setLoadError(err instanceof Error ? err.message : "Analiz yüklenemedi.");
+          setLoadError(err instanceof Error ? err.message : t("common.errorAnalysisLoadFailed"));
         }
       } finally {
         if (!cancelled) setLoadingAnalysis(false);
@@ -153,25 +169,38 @@ function PersonaTalkContent() {
     return () => {
       cancelled = true;
     };
-  }, [getAccessToken, initialPersona, params.id]);
+  }, [getAccessToken, initialPersona, locale, params.id, t]);
 
   const talkPersonas = useMemo(
-    () => (result ? buildTalkPersonas(result) : []),
-    [result]
+    () => (result ? buildTalkPersonas(result, t) : []),
+    [result, t]
   );
+
+  // Talk TTS always uses TR accent so speech matches Turkish conversation text.
+  useEffect(() => {
+    if (!activePersonaName) return;
+    setAvatarConfig(getAvatarConfigForPersona(activePersonaName, "tr"));
+  }, [activePersonaName]);
 
   const activePersona = useMemo(
     () => talkPersonas.find((p) => p.name === activePersonaName) ?? null,
     [talkPersonas, activePersonaName]
   );
 
-  const productName = formData?.productName ?? "Ürün";
+  const productName = formData?.productName ?? t("common.product");
   const leaveHref = params.id === "demo-public" ? "/demo" : `/results/${params.id}`;
 
-  const webcamEnabled = conversationStarted || avatarReady;
+  // Only after Join — Chrome needs camera/mic requested under the click gesture.
   const { videoRef, ready: cameraReady, error: cameraError } = usePresenceWebcam({
-    enabled: webcamEnabled,
+    enabled: conversationStarted,
+    stream: mediaStream,
   });
+
+  useEffect(() => {
+    return () => {
+      mediaStream?.getTracks().forEach((track) => track.stop());
+    };
+  }, [mediaStream]);
 
   useEffect(() => {
     if (!conversationStarted) {
@@ -192,12 +221,12 @@ function PersonaTalkContent() {
       const ok = await handle?.waitUntilReady?.(8000);
       handle = avatarRef.current;
       if (!ok && !handle?.isReady()) {
-        throw new Error("Avatar henüz hazır değil.");
+        throw new Error(t("talk.errorAvatarNotReady"));
       }
     }
     setPhase("persona_speaking");
     await avatarRef.current!.speak(text);
-  }, []);
+  }, [t]);
 
   const submitQuestion = useCallback(
     async (text: string) => {
@@ -215,7 +244,7 @@ function PersonaTalkContent() {
 
       try {
         if (!accessToken) {
-          throw new Error("Sesli soru-cevap için giriş yapın. Şimdilik sadece açılış konuşmasını dinleyebilirsiniz.");
+          throw new Error(t("talk.errorLoginForQa"));
         }
         const res = await askPersonaFollowup(accessToken, {
           analysisId,
@@ -226,9 +255,10 @@ function PersonaTalkContent() {
           productDescription: formData?.productDescription,
           priorPersona: activePersona as unknown as Record<string, unknown>,
           history,
+          locale: "tr",
         });
 
-        const answer = stripCitationTags(safeText(res.answer, "Yanıt alınamadı."));
+        const answer = stripCitationTags(safeText(res.answer, tTalk("talk.errorNoAnswer")));
         setLastReply(answer);
         setHistory((prev) => [
           ...prev,
@@ -238,9 +268,9 @@ function PersonaTalkContent() {
         await speakPersona(answer);
         startListeningRef.current();
       } catch (error) {
-        setMicError(error instanceof Error ? error.message : "Soru gönderilemedi.");
+        setMicError(error instanceof Error ? error.message : t("talk.errorSendFailed"));
         if (avatarRef.current?.isReady()) {
-          await speakPersona("Üzgünüm, yanıt veremedim. Tekrar dener misiniz?");
+          await speakPersona(tTalk("talk.errorSorryRetry"));
           startListeningRef.current();
         } else {
           setPhase("idle");
@@ -260,6 +290,7 @@ function PersonaTalkContent() {
       history,
       speakPersona,
       stopListening,
+      t,
     ]
   );
 
@@ -276,7 +307,8 @@ function PersonaTalkContent() {
     detectorRef.current = createSpeechEndDetector({
       silenceMs: SILENCE_MS,
       minChars: 6,
-      lang: "tr-TR",
+      lang: speechLang,
+      locale,
       requireConfirmation: true,
       onTranscript: (t) => setLiveTranscript(t),
       onSilenceDetected: (t) => {
@@ -295,27 +327,52 @@ function PersonaTalkContent() {
     });
 
     detectorRef.current.start();
-  }, [stopListening, submitQuestion]);
+  }, [stopListening, submitQuestion, speechLang, locale]);
 
   startListeningRef.current = startListening;
 
   const runOpening = useCallback(async () => {
     if (!activePersona) return;
-    const opening = personaOpeningLine(activePersona, productName);
+    const opening = personaOpeningLine(activePersona, productName, tTalk);
     await speakPersona(opening);
-    startListening();
-  }, [activePersona, productName, speakPersona, startListening]);
+    if (micGrantedRef.current) {
+      startListening();
+    } else {
+      setPhase("listening");
+      setShowManualInput(true);
+      setMicError((prev) =>
+        prev ??
+        t("talk.errorMicFallback")
+      );
+    }
+  }, [activePersona, productName, speakPersona, startListening, t]);
 
   const beginConversation = useCallback(async () => {
     if (conversationStarted || !activePersona) return;
     setMicError(null);
 
-    // next/dynamic previously broke refs; trust React ready flag + handle if present
+    // CRITICAL (Chrome/Windows): request cam+mic in the Join click stack BEFORE long awaits.
+    // Safari often shows prompts without this; Chrome returns not-allowed with no dialog.
+    const media = await requestCameraAndMic(locale);
+    micGrantedRef.current = media.micOk;
+    if (media.stream) {
+      setMediaStream((prev) => {
+        prev?.getTracks().forEach((track) => track.stop());
+        return media.stream;
+      });
+    }
+    if (media.error) {
+      setMicError(media.error);
+    }
+    if (!media.micOk) {
+      setShowManualInput(true);
+    }
+
     if (!avatarReady && !avatarRef.current?.isReady()) {
       const ok = await avatarRef.current?.waitUntilReady?.(12000);
       if (!ok && !avatarReady) {
         setPhase("idle");
-        setMicError("Avatar hâlâ yükleniyor. Birkaç saniye bekleyip tekrar deneyin.");
+        setMicError(t("talk.errorAvatarLoading"));
         return;
       }
     }
@@ -332,11 +389,31 @@ function PersonaTalkContent() {
     try {
       await runOpening();
     } catch (error) {
-      setMicError(error instanceof Error ? error.message : "Oturum başlatılamadı.");
+      setMicError(error instanceof Error ? error.message : t("talk.errorSessionStart"));
       setPhase("idle");
       setConversationStarted(false);
     }
-  }, [activePersona, avatarReady, conversationStarted, runOpening]);
+  }, [activePersona, avatarReady, conversationStarted, locale, runOpening, t]);
+
+  const retryMediaPermissions = useCallback(async () => {
+    setMicError(null);
+    const media = await requestCameraAndMic(locale);
+    micGrantedRef.current = media.micOk;
+    if (media.stream) {
+      setMediaStream((prev) => {
+        prev?.getTracks().forEach((track) => track.stop());
+        return media.stream;
+      });
+    }
+    if (media.error) {
+      setMicError(media.error);
+      return;
+    }
+    setMicError(null);
+    if (conversationStarted && media.micOk) {
+      startListening();
+    }
+  }, [conversationStarted, locale, startListening]);
 
   useEffect(() => {
     return () => {
@@ -348,7 +425,7 @@ function PersonaTalkContent() {
   function selectPersona(persona: PersonaAnalysis) {
     if (conversationStarted) return;
     setActivePersonaName(persona.name);
-    setAvatarConfig(getAvatarConfigForPersona(persona.name));
+    setAvatarConfig(getAvatarConfigForPersona(persona.name, "tr"));
     setAvatarReady(false);
   }
 
@@ -390,7 +467,7 @@ function PersonaTalkContent() {
   async function handleReplayOpening() {
     if (!activePersona) return;
     stopListening();
-    const line = lastReply || personaOpeningLine(activePersona, productName);
+    const line = lastReply || personaOpeningLine(activePersona, productName, tTalk);
     await speakPersona(line);
     if (conversationStarted) startListening();
   }
@@ -399,18 +476,18 @@ function PersonaTalkContent() {
   const userActive = phase === "listening" && liveTranscript.trim().length > 0;
   const captionText = stripCitationTags(
     phase === "processing"
-      ? "Persona yanıt hazırlıyor…"
+      ? t("talk.captionProcessing")
       : phase === "listening"
-        ? liveTranscript || "Sorunuzu söyleyin — kelimeler burada görünür."
+        ? liveTranscript || t("talk.captionListening")
         : lastReply ||
             activePersona?.firstImpression ||
-            "Odaya katılarak persona ile konuşmaya başlayın."
+            t("talk.captionJoinHint")
   );
 
   if (loadingAnalysis) {
     return (
       <main className="presence-room flex min-h-screen items-center justify-center bg-[#1a1a1a] text-slate-300">
-        Analiz yükleniyor…
+        {t("talk.loadingAnalysis")}
       </main>
     );
   }
@@ -418,9 +495,9 @@ function PersonaTalkContent() {
   if (loadError || !result || !avatarConfig || !activePersona) {
     return (
       <main className="presence-room flex min-h-screen flex-col items-center justify-center gap-4 bg-[#1a1a1a] px-4 text-center text-slate-200">
-        <p>{loadError ?? "Persona bulunamadı."}</p>
+        <p>{loadError ?? t("talk.personaNotFound")}</p>
         <Link href={leaveHref} className="text-blue-300 underline">
-          Sonuçlara dön
+          {t("talk.backToResults")}
         </Link>
       </main>
     );
@@ -433,11 +510,11 @@ function PersonaTalkContent() {
           <div className="flex items-center gap-2">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400" aria-hidden />
             <p className="presence-header-title truncate text-sm font-semibold">
-              {productName} · Persona Odası
+              {tp("talk.roomTitle", { product: productName })}
             </p>
           </div>
           <p className="presence-header-subtitle mt-0.5 truncate text-xs">
-            {avatarConfig.tagline}
+            {localizedPersonaTagline(t, avatarConfig.id)}
           </p>
         </div>
 
@@ -451,7 +528,7 @@ function PersonaTalkContent() {
             href={leaveHref}
             className="presence-header-link inline-flex items-center gap-1.5 rounded-full px-2.5 py-1"
           >
-            ← Çıkış
+            ← {t("talk.exit")}
           </Link>
         </div>
       </header>
@@ -459,11 +536,11 @@ function PersonaTalkContent() {
       {!conversationStarted && (
         <div className="z-20 shrink-0 border-b border-white/10 bg-[#141414]/90 px-4 py-3">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
-            Persona seçin
+            {t("talk.selectPersona")}
           </p>
           <div className="flex gap-2 overflow-x-auto pb-1">
             {talkPersonas.map((persona) => {
-              const cfg = getAvatarConfigForPersona(persona.name);
+              const cfg = getAvatarConfigForPersona(persona.name, "tr");
               const selected = persona.name === activePersonaName;
               return (
                 <button
@@ -476,9 +553,11 @@ function PersonaTalkContent() {
                       : "border-white/10 bg-white/5 hover:bg-white/10"
                   }`}
                 >
-                  <span className="block text-xs font-semibold text-white">{cfg.label}</span>
+                  <span className="block text-xs font-semibold text-white">
+                    {localizedPersonaLabel(t, cfg.id)}
+                  </span>
                   <span className="mt-0.5 block max-w-[160px] truncate text-[10px] text-slate-400">
-                    {cfg.tagline}
+                    {localizedPersonaTagline(t, cfg.id)}
                   </span>
                 </button>
               );
@@ -502,6 +581,7 @@ function PersonaTalkContent() {
             ref={avatarRef}
             persona={avatarConfig}
             token={accessToken}
+            locale="tr"
             variant="tile"
             className="relative z-0 h-full"
             onReady={() => setAvatarReady(true)}
@@ -512,13 +592,15 @@ function PersonaTalkContent() {
           <div className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-black/55 to-transparent px-4 pb-8 pt-4">
             <div className="flex items-center gap-2">
               <Users size={14} className="text-slate-300" />
-              <span className="text-sm font-medium text-white">{activePersona.name}</span>
+              <span className="text-sm font-medium text-white">
+                {localizedPersonaDisplayName(t, activePersona.name)}
+              </span>
               <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-slate-300">
-                Persona
+                {t("talk.personaBadge")}
               </span>
               {personaActive && (
                 <span className="rounded-full bg-[#0b5cff]/25 px-2 py-0.5 text-[10px] font-medium text-blue-200">
-                  Konuşuyor
+                  {t("talk.speaking")}
                 </span>
               )}
             </div>
@@ -536,7 +618,7 @@ function PersonaTalkContent() {
             {conversationStarted ? (
               <>
                 <p className="presence-caption-label mb-1 text-[11px] font-semibold uppercase tracking-wider">
-                  {phase === "listening" ? "Canlı altyazı" : "Persona yanıtı"}
+                  {phase === "listening" ? t("talk.liveCaption") : t("talk.personaReply")}
                 </p>
                 <p className="presence-caption-text max-w-[min(100%,720px)] text-sm leading-relaxed sm:text-base">
                   {captionText}
@@ -549,8 +631,8 @@ function PersonaTalkContent() {
             <div className="pointer-events-none absolute inset-x-0 top-16 z-20 flex justify-center px-4 sm:top-20">
               <div className="rounded-full border border-white/10 bg-black/45 px-4 py-2 text-center text-sm text-slate-200 backdrop-blur-sm">
                 {avatarReady
-                  ? `${activePersona.name} hazır — alttan odaya katılın`
-                  : "3D avatar yükleniyor…"}
+                  ? tp("talk.readyJoin", { name: activePersona.name })
+                  : t("talk.avatarLoading")}
               </div>
             </div>
           )}
@@ -558,14 +640,21 @@ function PersonaTalkContent() {
           {phase === "booting" && conversationStarted && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/45">
               <div className="rounded-2xl border border-white/10 bg-[#141414]/95 px-6 py-4 text-center">
-                <p className="text-sm text-slate-200">Odaya bağlanılıyor…</p>
+                <p className="text-sm text-slate-200">{t("talk.connecting")}</p>
               </div>
             </div>
           )}
 
           {micError && (
             <div className="absolute left-4 right-4 top-16 z-30 rounded-xl border border-amber-400/30 bg-amber-500/15 px-4 py-3 text-sm text-amber-100 sm:left-6 sm:max-w-md">
-              {micError}
+              <p>{micError}</p>
+              <button
+                type="button"
+                className="mt-2 rounded-lg bg-amber-400/20 px-3 py-1.5 text-xs font-semibold text-amber-50 transition hover:bg-amber-400/30"
+                onClick={() => void retryMediaPermissions()}
+              >
+                {t("talk.retryPermissions")}
+              </button>
             </div>
           )}
         </div>
@@ -578,7 +667,7 @@ function PersonaTalkContent() {
       >
         <span className="presence-phase-bar-text inline-flex items-center gap-2">
           {phase === "listening" && <Mic size={12} className="animate-pulse text-emerald-400" />}
-          {phaseLabel(phase, answerConfirmOpen)}
+          {phaseLabel(phase, answerConfirmOpen, t)}
         </span>
       </div>
 
@@ -612,13 +701,13 @@ function PersonaTalkContent() {
               className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-400"
               htmlFor="presence-manual-question"
             >
-              Sorunuzu yazın
+              {t("talk.writeQuestion")}
             </label>
             <textarea
               id="presence-manual-question"
               value={manualQuestion}
               onChange={(e) => setManualQuestion(e.target.value)}
-              placeholder="Örn: Fiyatlandırma neden net değil?"
+              placeholder={t("talk.questionPlaceholder")}
               className="min-h-28 w-full rounded-xl border border-white/10 bg-[#0d0d0d] p-3 text-base leading-relaxed text-slate-100"
               spellCheck
             />
@@ -630,14 +719,14 @@ function PersonaTalkContent() {
                 onClick={() => void handleManualSubmit()}
               >
                 <Send size={16} />
-                Gönder
+                {t("common.send")}
               </button>
               <button
                 type="button"
                 className="rounded-xl border border-white/15 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5"
                 onClick={() => setShowManualInput(false)}
               >
-                İptal
+                {t("common.cancel")}
               </button>
             </div>
           </div>
@@ -650,12 +739,13 @@ function PersonaTalkContent() {
 function PersonaTalkPageGate() {
   const params = useParams<{ id: string }>();
   const isDemo = params.id === "demo-public";
+  const t = useT();
 
   const content = (
     <Suspense
       fallback={
         <main className="presence-room flex min-h-screen items-center justify-center bg-[#1a1a1a] text-slate-300">
-          Yükleniyor…
+          {t("common.loading")}
         </main>
       }
     >

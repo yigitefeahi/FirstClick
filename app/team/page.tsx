@@ -25,6 +25,7 @@ import {
   listWorkspaces,
 } from "@/lib/api";
 import { useAuth } from "@/lib/supabase/auth-context";
+import { useT } from "@/lib/i18n/preferences-context";
 
 type PendingInvite = {
   id: string;
@@ -37,6 +38,7 @@ type PendingInvite = {
 
 function TeamContent() {
   const { getAccessToken } = useAuth();
+  const t = useT();
   const [workspaces, setWorkspaces] = useState<
     { id: string; name: string; role: string }[]
   >([]);
@@ -76,7 +78,7 @@ function TeamContent() {
       try {
         await refresh();
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Yüklenemedi.");
+        if (!cancelled) setError(err instanceof Error ? err.message : t("common.errorLoadFailed"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -114,13 +116,13 @@ function TeamContent() {
     setError(null);
     try {
       const token = await getAccessToken();
-      if (!token) throw new Error("Oturum gerekli.");
+      if (!token) throw new Error(t("common.errorSessionRequired"));
       const ws = await createWorkspace(token, name.trim());
       setName("");
       await refresh();
       setActiveId(ws.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Oluşturulamadı.");
+      setError(err instanceof Error ? err.message : t("common.errorCreateFailed"));
     } finally {
       setBusy(false);
     }
@@ -133,13 +135,13 @@ function TeamContent() {
     setError(null);
     try {
       const token = await getAccessToken();
-      if (!token) throw new Error("Oturum gerekli.");
+      if (!token) throw new Error(t("common.errorSessionRequired"));
       await inviteWorkspaceMember(token, activeId, inviteEmail.trim(), inviteRole);
       setInviteEmail("");
       const m = await listWorkspaceMembers(token, activeId);
       setMembers(m);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Davet başarısız.");
+      setError(err instanceof Error ? err.message : t("common.errorInviteFailed"));
     } finally {
       setBusy(false);
     }
@@ -150,14 +152,14 @@ function TeamContent() {
     setError(null);
     try {
       const token = await getAccessToken();
-      if (!token) throw new Error("Oturum gerekli.");
+      if (!token) throw new Error(t("common.errorSessionRequired"));
       const accepted = await acceptWorkspaceInvite(token, inviteId);
       await refresh();
       const invite = pending.find((p) => p.id === inviteId);
       if (invite) setActiveId(invite.workspaceId);
       void accepted;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Kabul edilemedi.");
+      setError(err instanceof Error ? err.message : t("common.errorAcceptFailed"));
     } finally {
       setBusy(false);
     }
@@ -168,22 +170,22 @@ function TeamContent() {
     setError(null);
     try {
       const token = await getAccessToken();
-      if (!token) throw new Error("Oturum gerekli.");
+      if (!token) throw new Error(t("common.errorSessionRequired"));
       await declineWorkspaceInvite(token, inviteId);
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Reddedilemedi.");
+      setError(err instanceof Error ? err.message : t("common.errorDeclineFailed"));
     } finally {
       setBusy(false);
     }
   }
 
-  if (loading) return <LoadingState label="Takım yükleniyor…" />;
+  if (loading) return <LoadingState label={t("team.loading")} />;
 
   return (
     <div className="space-y-6">
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
           {error}
         </div>
       )}
@@ -191,7 +193,7 @@ function TeamContent() {
       {pending.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="font-display text-base">Bekleyen davetleriniz</CardTitle>
+            <CardTitle className="font-display text-base dark:text-white">{t("team.pendingInvites")}</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200">
@@ -202,8 +204,8 @@ function TeamContent() {
                 >
                   <div className="text-sm">
                     <p className="font-medium text-lab-ink">{invite.workspaceName}</p>
-                    <p className="text-slate-500">
-                      Rol: {invite.role} · {invite.email}
+                    <p className="text-slate-500 dark:text-slate-400">
+                      {t("common.role")}: {invite.role} · {invite.email}
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -213,7 +215,7 @@ function TeamContent() {
                       disabled={busy}
                       onClick={() => handleAccept(invite.id)}
                     >
-                      Kabul et
+                      {t("common.accept")}
                     </Button>
                     <Button
                       type="button"
@@ -222,7 +224,7 @@ function TeamContent() {
                       disabled={busy}
                       onClick={() => handleDecline(invite.id)}
                     >
-                      Reddet
+                      {t("common.decline")}
                     </Button>
                   </div>
                 </li>
@@ -234,28 +236,25 @@ function TeamContent() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-display text-base">Workspace oluştur</CardTitle>
+          <CardTitle className="font-display text-base dark:text-white">{t("team.createWorkspace")}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleCreate} className="flex flex-col gap-3 sm:flex-row">
             <Input
-              placeholder="Örn: Growth Lab"
+              placeholder={t("team.workspacePlaceholder")}
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
             <Button type="submit" disabled={busy}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Oluştur
+              {t("common.create")}
             </Button>
           </form>
         </CardContent>
       </Card>
 
       {workspaces.length === 0 ? (
-        <EmptyState
-          title="Henüz workspace yok"
-          description="Workspace oluşturup e-posta ile davet edin. Davetli kişi aynı e-posta ile giriş yapınca buradan kabul eder."
-        />
+        <EmptyState title={t("team.emptyTitle")} description={t("team.emptyDesc")} />
       ) : (
         <>
           <div className="flex flex-wrap gap-2">
@@ -266,8 +265,8 @@ function TeamContent() {
                 onClick={() => setActiveId(w.id)}
                 className={
                   activeId === w.id
-                    ? "rounded-xl bg-lab-ink px-3 py-1.5 text-sm text-white"
-                    : "rounded-xl bg-white px-3 py-1.5 text-sm text-slate-600 ring-1 ring-slate-200"
+                    ? "rounded-xl bg-[#0c1222] px-3 py-1.5 text-sm text-white dark:bg-lab-signal dark:text-[#0c1222]"
+                    : "rounded-xl bg-white px-3 py-1.5 text-sm text-slate-600 ring-1 ring-slate-200 dark:bg-[var(--lab-mist)] dark:text-slate-300 dark:ring-white/10"
                 }
               >
                 {w.name} · {w.role}
@@ -277,25 +276,25 @@ function TeamContent() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="font-display text-base">Üyeler · davet</CardTitle>
+              <CardTitle className="font-display text-base dark:text-white">{t("team.membersInvite")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <form onSubmit={handleInvite} className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
                 <div>
-                  <Label htmlFor="invite">E-posta</Label>
+                  <Label htmlFor="invite">{t("auth.email")}</Label>
                   <Input
                     id="invite"
                     type="email"
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
-                    placeholder="pm@sirket.com"
+                    placeholder={t("team.inviteEmailPlaceholder")}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="role">Rol</Label>
+                  <Label htmlFor="role">{t("common.role")}</Label>
                   <select
                     id="role"
-                    className="flex h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"
+                    className="flex h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm dark:border-white/10 dark:bg-surface dark:text-white"
                     value={inviteRole}
                     onChange={(e) => setInviteRole(e.target.value as "viewer" | "editor")}
                   >
@@ -305,28 +304,24 @@ function TeamContent() {
                 </div>
                 <div className="flex items-end">
                   <Button type="submit" disabled={busy}>
-                    Davet et
+                    {t("common.invite")}
                   </Button>
                 </div>
               </form>
-              <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200">
+              <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 dark:divide-white/10 dark:border-white/10">
                 {members.map((m) => (
                   <li key={m.id} className="flex items-center justify-between px-4 py-3 text-sm">
-                    <span>{m.email}</span>
+                    <span className="dark:text-slate-200">{m.email}</span>
                     <div className="flex gap-2">
                       <Badge variant="neutral">{m.role}</Badge>
                       <Badge variant={m.status === "active" ? "success" : "warning"}>
-                        {m.status === "active" ? "aktif" : "bekliyor"}
+                        {m.status === "active" ? t("common.active") : t("common.pending")}
                       </Badge>
                     </div>
                   </li>
                 ))}
               </ul>
-              <p className="text-xs text-slate-500">
-                Davet e-posta ile kaydedilir. Davetli kişi FirstClick’e o e-posta ile giriş
-                yapınca “Bekleyen davetleriniz”den kabul eder. Mail gönderimi yok — demo için
-                aynı hesabı/ikinci hesabı kullanın.
-              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t("team.inviteHint")}</p>
             </CardContent>
           </Card>
         </>
@@ -336,6 +331,8 @@ function TeamContent() {
 }
 
 export default function TeamPage() {
+  const t = useT();
+
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
@@ -346,15 +343,15 @@ export default function TeamPage() {
             className="mb-6 inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-brand-700"
           >
             <ArrowLeft className="h-4 w-4" />
-            Analize dön
+            {t("common.backToAnalyze")}
           </Link>
           <div className="mb-8 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-lab-ink text-lab-signal">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0c1222] text-lab-signal">
               <Users className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="font-display text-3xl font-semibold text-lab-ink">Takım</h1>
-              <p className="text-slate-500">Workspace · davet · kabul</p>
+              <h1 className="font-display text-3xl font-semibold text-lab-ink dark:text-white">{t("team.title")}</h1>
+              <p className="text-slate-500 dark:text-slate-400">{t("team.subtitle")}</p>
             </div>
           </div>
           <AuthGuard>

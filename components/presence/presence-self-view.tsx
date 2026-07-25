@@ -1,6 +1,7 @@
 "use client";
 
 import { Mic, MicOff, VideoOff } from "lucide-react";
+import { useT } from "@/lib/i18n/preferences-context";
 
 type PresenceSelfViewProps = {
   videoRef: (node: HTMLVideoElement | null) => void;
@@ -17,6 +18,8 @@ export function PresenceSelfView({
   active,
   listening,
 }: PresenceSelfViewProps) {
+  const t = useT();
+
   return (
     <div
       className={`presence-pip absolute bottom-4 right-4 z-30 w-[min(28vw,220px)] overflow-hidden rounded-xl border-2 bg-[#0d0d0d] shadow-2xl transition-colors duration-200 ${
@@ -32,21 +35,21 @@ export function PresenceSelfView({
           playsInline
           muted
           autoPlay
-          aria-label="Kamera önizlemeniz"
+          aria-label={t("presence.self.cameraAria")}
         />
 
         {!cameraReady && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#161616] px-3 text-center">
             <VideoOff size={22} className="text-slate-500" />
             <span className="text-[11px] leading-snug text-slate-400">
-              {cameraError || "Kamera başlatılıyor…"}
+              {cameraError || t("presence.self.cameraStarting")}
             </span>
           </div>
         )}
 
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/80 to-transparent px-2.5 pb-2 pt-6">
           <div className="flex items-center justify-between gap-2">
-            <span className="truncate text-xs font-medium text-white">Siz</span>
+            <span className="truncate text-xs font-medium text-white">{t("presence.self.you")}</span>
             <span
               className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
                 listening
@@ -57,12 +60,12 @@ export function PresenceSelfView({
               {listening ? (
                 <>
                   <Mic size={10} className={active ? "animate-pulse" : ""} />
-                  Canlı
+                  {t("presence.self.live")}
                 </>
               ) : (
                 <>
                   <MicOff size={10} />
-                  Hazır
+                  {t("presence.self.ready")}
                 </>
               )}
             </span>

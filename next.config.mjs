@@ -4,8 +4,9 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
+    // Allow cam/mic on this origin (talk room). Empty () blocks Chrome with no prompt.
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=()",
+    value: "camera=(self), microphone=(self), geolocation=()",
   },
   { key: "X-DNS-Prefetch-Control", value: "on" },
 ];

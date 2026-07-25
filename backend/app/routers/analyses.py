@@ -65,6 +65,7 @@ async def compare(
         after_id=body.after_id,
         before_row=before_row,
         after_row=after_row,
+        locale=body.locale if body.locale in ("tr", "en") else "tr",
     )
 
 

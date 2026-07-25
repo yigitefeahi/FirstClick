@@ -20,13 +20,23 @@ from app.schemas.analysis import (
 
 logger = logging.getLogger(__name__)
 
-SCORE_KEYS = [
+SCORE_KEYS_TR = [
     ("overallScore", "Genel skor"),
     ("clarityScore", "Anlaşılabilirlik"),
     ("adoptionScore", "Kullanma isteği"),
     ("onboardingRiskScore", "Onboarding riski"),
     ("targetFitScore", "Hedef kitle uyumu"),
 ]
+
+SCORE_KEYS_EN = [
+    ("overallScore", "Overall score"),
+    ("clarityScore", "Clarity"),
+    ("adoptionScore", "Adoption intent"),
+    ("onboardingRiskScore", "Onboarding risk"),
+    ("targetFitScore", "Target fit"),
+]
+
+SCORE_KEYS = SCORE_KEYS_TR
 
 
 def _strip_json_fences(raw: str) -> str:
@@ -41,9 +51,16 @@ async def _chat_json(
     max_tokens: int = 700,
     model: str | None = None,
     temperature: float = 0.5,
+    locale: str = "tr",
 ) -> dict | None:
     if not settings.openai_api_key:
         return None
+    system = (
+        "You are a product UX analyst. Reply with valid JSON only. "
+        "Write all user-facing string values in English."
+        if locale == "en"
+        else "Ürün UX analisti olarak geçerli JSON yanıt ver."
+    )
     async with httpx.AsyncClient(timeout=90.0) as client:
         response = await client.post(
             "https://api.openai.com/v1/chat/completions",
@@ -59,7 +76,7 @@ async def _chat_json(
                 "messages": [
                     {
                         "role": "system",
-                        "content": "Ürün UX analisti olarak geçerli JSON yanıt ver.",
+                        "content": system,
                     },
                     {"role": "user", "content": prompt},
                 ],
@@ -77,9 +94,10 @@ async def _chat_json(
         return None
 
 
-def compute_score_deltas(before: dict, after: dict) -> list[ScoreDelta]:
+def compute_score_deltas(before: dict, after: dict, locale: str = "tr") -> list[ScoreDelta]:
+    keys = SCORE_KEYS_EN if locale == "en" else SCORE_KEYS_TR
     deltas: list[ScoreDelta] = []
-    for key, label in SCORE_KEYS:
+    for key, label in keys:
         b = int(before.get(key) or 0)
         a = int(after.get(key) or 0)
         # Onboarding risk: lower is better — flip delta sign for "improvement"
@@ -94,23 +112,62 @@ async def compare_analyses(
     after_id: str,
     before_row: dict,
     after_row: dict,
+    locale: str = "tr",
 ) -> CompareResponse:
+    locale = locale if locale in ("tr", "en") else "tr"
     before_result = before_row.get("result") or {}
     after_result = after_row.get("result") or {}
     before_form = before_row.get("form_data") or {}
     after_form = after_row.get("form_data") or {}
 
-    deltas = compute_score_deltas(before_result, after_result)
-    before_label = (
-        f"{before_form.get('productName') or 'Önce'} · "
-        f"{(before_row.get('created_at') or '')[:10]}"
-    )
-    after_label = (
-        f"{after_form.get('productName') or 'Sonra'} · "
-        f"{(after_row.get('created_at') or '')[:10]}"
-    )
+    deltas = compute_score_deltas(before_result, after_result, locale=locale)
+    if locale == "en":
+        before_label = (
+            f"{before_form.get('productName') or 'Before'} · "
+            f"{(before_row.get('created_at') or '')[:10]}"
+        )
+        after_label = (
+            f"{after_form.get('productName') or 'After'} · "
+            f"{(after_row.get('created_at') or '')[:10]}"
+        )
+        prompt = f"""
+Compare two FirstClick user-simulation results. Answer "what changed?" clearly for a product team.
 
-    prompt = f"""
+BEFORE ({before_label}):
+Scores: overall={before_result.get('overallScore')}, clarity={before_result.get('clarityScore')},
+adoption={before_result.get('adoptionScore')}, onboardingRisk={before_result.get('onboardingRiskScore')},
+targetFit={before_result.get('targetFitScore')}
+Blind spots: {before_result.get('blindSpots')}
+Drop-offs: {before_result.get('dropOffPoints')}
+Actions: {before_result.get('actionPlan')}
+
+AFTER ({after_label}):
+Scores: overall={after_result.get('overallScore')}, clarity={after_result.get('clarityScore')},
+adoption={after_result.get('adoptionScore')}, onboardingRisk={after_result.get('onboardingRiskScore')},
+targetFit={after_result.get('targetFitScore')}
+Blind spots: {after_result.get('blindSpots')}
+Drop-offs: {after_result.get('dropOffPoints')}
+Actions: {after_result.get('actionPlan')}
+
+Reply with JSON ONLY:
+{{
+  "improved": string[] (concrete improvements, max 5),
+  "regressed": string[] (regressions, max 5),
+  "unchangedRisks": string[] (remaining risks, max 5),
+  "narrative": string (3-5 sentences, English),
+  "recommendation": string (1-2 sentences for the next sprint, English)
+}}
+"""
+    else:
+        before_label = (
+            f"{before_form.get('productName') or 'Önce'} · "
+            f"{(before_row.get('created_at') or '')[:10]}"
+        )
+        after_label = (
+            f"{after_form.get('productName') or 'Sonra'} · "
+            f"{(after_row.get('created_at') or '')[:10]}"
+        )
+        prompt = f"""
 İki FirstClick kullanıcı simülasyonu sonucunu karşılaştır. "Ne değişti?" sorusuna ürün ekibi için net cevap ver.
 
 ÖNCE ({before_label}):
@@ -143,20 +200,33 @@ Yanıt SADECE JSON:
         model=settings.openai_synthesis_model,
         max_tokens=800,
         temperature=0.4,
+        locale=locale,
     )
     if not data:
         improved = [d.label for d in deltas if d.delta > 3]
         regressed = [d.label for d in deltas if d.delta < -3]
-        data = {
-            "improved": improved or ["Belirgin skor iyileşmesi yok"],
-            "regressed": regressed or [],
-            "unchangedRisks": (after_result.get("blindSpots") or [])[:3],
-            "narrative": (
-                f"Genel skor {before_result.get('overallScore')} → {after_result.get('overallScore')}. "
-                "Detaylı AI anlatımı için OPENAI_API_KEY gerekir."
-            ),
-            "recommendation": "Zayıf skor alanına odaklanıp bir iterasyon daha test edin.",
-        }
+        if locale == "en":
+            data = {
+                "improved": improved or ["No clear score improvement"],
+                "regressed": regressed or [],
+                "unchangedRisks": (after_result.get("blindSpots") or [])[:3],
+                "narrative": (
+                    f"Overall score {before_result.get('overallScore')} → {after_result.get('overallScore')}. "
+                    "Detailed AI narrative requires OPENAI_API_KEY."
+                ),
+                "recommendation": "Focus on the weakest score area and run another iteration.",
+            }
+        else:
+            data = {
+                "improved": improved or ["Belirgin skor iyileşmesi yok"],
+                "regressed": regressed or [],
+                "unchangedRisks": (after_result.get("blindSpots") or [])[:3],
+                "narrative": (
+                    f"Genel skor {before_result.get('overallScore')} → {after_result.get('overallScore')}. "
+                    "Detaylı AI anlatımı için OPENAI_API_KEY gerekir."
+                ),
+                "recommendation": "Zayıf skor alanına odaklanıp bir iterasyon daha test edin.",
+            }
 
     return CompareResponse(
         before_id=before_id,
@@ -177,11 +247,14 @@ async def answer_followup(
     user_id: str,
     body: FollowupRequest,
 ) -> FollowupResponse:
+    # Talk/follow-up replies are always Turkish regardless of UI language.
+    locale = "tr"
     form = AnalysisFormData(
         productName=body.product_name or "Ürün",
         productDescription=body.product_description or body.question,
         selectedPersonas=["skeptical"],
         productId=body.product_id,
+        locale=locale,
     )
     chunks = []
     try:
@@ -194,20 +267,64 @@ async def answer_followup(
     except Exception as exc:
         logger.warning("followup retrieve failed: %s", exc)
 
-    rag = format_rag_context(chunks)
+    rag = format_rag_context(chunks, locale=locale)
     prior = body.prior_persona or {}
     history_lines = []
     for turn in body.history[-8:]:
-        who = "Kullanıcı" if turn.role == "user" else body.persona_name
+        if locale == "en":
+            who = "User" if turn.role == "user" else body.persona_name
+        else:
+            who = "Kullanıcı" if turn.role == "user" else body.persona_name
         history_lines.append(f"{who}: {turn.content}")
-    history_block = "\n".join(history_lines) if history_lines else "(önceki tur yok)"
+    if history_lines:
+        history_block = "\n".join(history_lines)
+    else:
+        history_block = "(no prior turns)" if locale == "en" else "(önceki tur yok)"
 
-    prompt = f"""
+    impression = prior.get("firstImpression") or prior.get("first_impression") or "-"
+    confusion = prior.get("confusion") or "-"
+    drop_off = prior.get("dropOffReason") or prior.get("drop_off_reason") or "-"
+
+    if locale == "en":
+        prompt = f"""
+You are in a FirstClick persona simulation. Your persona name is: "{body.persona_name}".
+Your earlier reaction (summary):
+- impression: {impression}
+- confusion: {confusion}
+- drop-off: {drop_off}
+
+Prior chat:
+{history_block}
+
+{rag}
+
+User follow-up question: {body.question}
+
+Rules:
+- Answer in first person as this persona
+- Reply in natural English
+- Base answers on product docs / web / past-test context; do not invent facts
+- Remember prior chat; do not contradict it
+- Add [doc:…] / [web:…] / [past:…] / [kb:…] tags for sources you use
+- Use [kb:…] for general UX rules; use user-corpus tags for product claims
+
+JSON:
+{{
+  "answer": string,
+  "citations": string[]
+}}
+"""
+        mock_answer = (
+            f"(as {body.persona_name}) I need more product context to answer this clearly. "
+            "Add documents or a web page to the corpus and try again."
+        )
+    else:
+        prompt = f"""
 Sen FirstClick persona simülasyonundasın. Persona adın: "{body.persona_name}".
 Önceki tepkin (özet):
-- izlenim: {prior.get('firstImpression') or prior.get('first_impression') or '-'}
-- kafa karışıklığı: {prior.get('confusion') or '-'}
-- vazgeçme: {prior.get('dropOffReason') or prior.get('drop_off_reason') or '-'}
+- izlenim: {impression}
+- kafa karışıklığı: {confusion}
+- vazgeçme: {drop_off}
 
 Önceki sohbet:
 {history_block}
@@ -218,6 +335,7 @@ Kullanıcının follow-up sorusu: {body.question}
 
 Kurallar:
 - Bu persona olarak "ben" diliyle cevapla
+- Türkçe cevapla
 - Ürün dokümanı / web / geçmiş test bağlamına dayan; uydurma
 - Önceki sohbeti hatırla; çelişme
 - Metinde kullandığın kaynaklara [doc:…] / [web:…] / [past:…] / [kb:…] etiketi ekle
@@ -229,13 +347,15 @@ JSON:
   "citations": string[]
 }}
 """
-    data = await _chat_json(prompt, max_tokens=400)
+        mock_answer = (
+            f"({body.persona_name} olarak) Bu soruyu net cevaplamak için daha fazla ürün bağlamı lazım. "
+            "Doküman veya web sayfası corpus’una ekleyip tekrar dene."
+        )
+
+    data = await _chat_json(prompt, max_tokens=400, locale=locale)
     if not data:
         return FollowupResponse(
-            answer=(
-                f"({body.persona_name} olarak) Bu soruyu net cevaplamak için daha fazla ürün bağlamı lazım. "
-                "Doküman veya web sayfası corpus’una ekleyip tekrar dene."
-            ),
+            answer=mock_answer,
             persona_name=body.persona_name,
             citations=[],
             source="mock",
