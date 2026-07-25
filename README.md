@@ -231,28 +231,47 @@ Grup 15
 
 - **Ürün Durumu**: Sprint 3 kapsamında geliştirilen ve kullanıma sunulan çalışan ürün ekran görüntüleri:
 
-  #### 🔐 Giriş / Kayıt Arayüzü ve Kullanıcı Geçmişi
+  #### 🔍 Yenilenen Giriş ve Tanıtım Ekranı (Landing Page)
   <p align="center">
-    <img src="screenshoots/sp3app_auth.jpg" width="48%" />
-    <img src="screenshoots/sp3app_history.jpg" width="48%" />
+    <img src="screenshoots/sp3app1.jpg" width="48%" />
+    <img src="screenshoots/sp3app2jpg.jpg" width="48%" />
   </p>
 
-  #### 📚 Doküman Yükleme ve Hibrit RAG Yönetimi
+  #### 🔐 Giriş / Kayıt Arayüzü ve Analiz Geçmişi
   <p align="center">
-    <img src="screenshoots/sp3app_rag.jpg" width="48%" />
-    <img src="screenshoots/sp3app_docs.jpg" width="48%" />
+    <img src="screenshoots/sp3app3.jpg" width="32%" />
+    <img src="screenshoots/sp3app4.jpg" width="32%" />
+    <img src="screenshoots/sp3app13.jpg" width="32%" />
   </p>
 
-  #### ⚖️ A/B Test Karşılaştırma Arayüzü
+  #### 📚 Ürün Tanımlama, Doküman Yükleme & Hibrit RAG Yönetimi
   <p align="center">
-    <img src="screenshoots/sp3app_ab.jpg" width="48%" />
-    <img src="screenshoots/sp3app_compare.jpg" width="48%" />
+    <img src="screenshoots/sp3app5.jpg" width="32%" />
+    <img src="screenshoots/sp3app6.jpg" width="32%" />
+    <img src="screenshoots/sp3app7.jpg" width="32%" />
   </p>
 
-  #### 🎙️ TTS (Text-to-Speech) Sesli Persona Dinleme & Analiz Paylaşımı
+  #### 📊 Raporlama Ekranı, Detay Analizler & Çok Turlu Soru-Cevap
   <p align="center">
-    <img src="screenshoots/sp3app_tts.jpg" width="48%" />
-    <img src="screenshoots/sp3app_share.jpg" width="48%" />
+    <img src="screenshoots/sp3app8jpg.jpg" width="32%" />
+    <img src="screenshoots/sp3app9.jpg" width="32%" />
+    <img src="screenshoots/sp3app10.jpg" width="32%" />
+  </p>
+
+  #### 🎙️ Canlı 3D Avatar Odası (TalkingHead Persona)
+  <p align="center">
+    <img src="screenshoots/sp3app11.jpg" width="60%" />
+  </p>
+
+  #### ⚖️ Karşılaştırma Laboratuvarı & A/B Pitch Karşılaştırma Testi
+  <p align="center">
+    <img src="screenshoots/sp3app12.jpg" width="48%" />
+    <img src="screenshoots/sp3app14.jpg" width="48%" />
+  </p>
+
+  #### 🏢 Çalışma Alanı (Workspace) & Takım Yönetimi
+  <p align="center">
+    <img src="screenshoots/sp3app15.jpg" width="60%" />
   </p>
 
 - **Sprint Review**:
