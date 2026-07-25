@@ -297,7 +297,7 @@ Frontend (Next.js)  ──POST──▶  Backend (FastAPI)  ──▶  OpenAI / 
 
 ### Ajan Orkestrasyonu İşleyiş Şeması
 
-FirstClick platformunda çalışan karmaşık çoklu ajan simülasyonu ve hibrit RAG akışının zaman diyagramı aşağıda gösterilmiştir:
+FirstClick platformunda çalışan çoklu ajan simülasyonu ve hibrit RAG akışının zaman diyagramı aşağıda gösterilmiştir:
 
 ```mermaid
 sequenceDiagram
@@ -311,42 +311,34 @@ sequenceDiagram
     User->>API: Analiz Başlat Talebi (POST /api/v1/analyze)
     Note over API: Kullanıcı Yetkisi Doğrulanır (JWT check)
     
-    rect rgb(240, 240, 255)
-        Note over API, DB: Adım 1: Özel Persona ve RAG Hazırlığı
-        API->>DB: Özel Personaları Getir (Select custom_personas)
-        DB-->>API: Özel Persona Detayları
-        
-        API->>LLM: Ürün Detayları Embedding Üret (text-embedding-3-small)
-        LLM-->>API: Vektör Temsili (Embedding Vector)
-        
-        API->>DB: RPC match_chunks() çağrısı (Vektör + Anahtar Kelime)
-        DB-->>API: Eşleşen Belge Parçaları (RAG Chunks - doc, web, past, kb)
-        API->>API: RRF (Reciprocal Rank Fusion) ile sırala & Diversify et
+    Note over API, DB: Adım 1: Özel Persona ve RAG Hazırlığı
+    API->>DB: Özel Personaları Getir (Select custom_personas)
+    DB-->>API: Özel Persona Detayları
+    
+    API->>LLM: Ürün Detayları Embedding Üret (text-embedding-3-small)
+    LLM-->>API: Vektör Temsili (Embedding Vector)
+    
+    API->>DB: RPC match_chunks() çağrısı (Vektör + Anahtar Kelime)
+    DB-->>API: Eşleşen Belge Parçaları (RAG Chunks - doc, web, past, kb)
+    API->>API: RRF (Reciprocal Rank Fusion) ile sırala & Diversify et
+
+    Note over API, LLM: Adım 2: Paralel Çoklu Ajan Simülasyonu
+    par Her bir Persona Ajanı için (gpt-4o-mini)
+        API->>LLM: Karakter & RAG Bağlamı ile Sorgu Gönder
+        LLM-->>API: Persona Simülasyon Yanıtı (Persona JSON)
+        API-->>User: Progress Event: "Persona Done" (SSE/Stream)
     end
 
-    rect rgb(245, 255, 245)
-        Note over API, LLM: Adım 2: Paralel Çoklu Ajan Simülasyonu
-        par Her bir Persona Ajanı için (gpt-4o-mini)
-            API->>LLM: Karakter & RAG Bağlamı ile Sorgu Gönder
-            LLM-->>API: Persona Simülasyon Yanıtı (Persona JSON)
-            API-->>User: Progress Event: "Persona Done" (SSE/Stream)
-        end
-    end
+    Note over API, LLM: Adım 3: Sentezleme ve Sonuç Üretimi
+    API->>LLM: Sentez Ajanı Sorgusu (gpt-4o + Tüm Persona Raporları)
+    LLM-->>API: Sentez Raporu (Synthesis JSON)
+    API-->>User: Progress Event: "Synthesis Done" (SSE/Stream)
 
-    rect rgb(255, 245, 240)
-        Note over API, LLM: Adım 3: Sentezleme ve Sonuç Üretimi
-        API->>LLM: Sentez Ajanı Sorgusu (gpt-4o + Tüm Persona Raporları)
-        LLM-->>API: Sentez Raporu (Synthesis JSON)
-        API-->>User: Progress Event: "Synthesis Done" (SSE/Stream)
-    end
-
-    rect rgb(240, 255, 255)
-        Note over API, DB: Adım 4: Kalıcı Depolama ve RAG İndeksleme
-        API->>DB: Analiz Sonucunu Kaydet (Insert analyses)
-        DB-->>API: Başarılı (ID döner)
-        API->>DB: Analizi RAG Vektör İndeksine Ekle (ingest_analysis_result)
-        DB-->>API: Başarılı
-    end
+    Note over API, DB: Adım 4: Kalıcı Depolama ve RAG İndeksleme
+    API->>DB: Analiz Sonucunu Kaydet (Insert analyses)
+    DB-->>API: Başarılı (ID döner)
+    API->>DB: Analizi RAG Vektör İndeksine Ekle (ingest_analysis_result)
+    DB-->>API: Başarılı
 
     API-->>User: Tamamlandı Yanıtı (Complete JSON Payload)
 ```
