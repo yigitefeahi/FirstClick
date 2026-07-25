@@ -1,5 +1,5 @@
 ═══════════════════════════════════════════
-  FirstClick — Arkadaşlar için kurulum
+  FirstClick — Kurulum
 ═══════════════════════════════════════════
 
 Bu zip “çalışır site” değil; kaynak kod.
