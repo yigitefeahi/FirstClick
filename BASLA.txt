@@ -2,9 +2,6 @@
   FirstClick — Kurulum
 ═══════════════════════════════════════════
 
-Bu zip “çalışır site” değil; kaynak kod.
-Bir kez kurulum yapınca herkes kendi bilgisayarında çalıştırır.
-
 ───────────────────────────────────────────
 0) Bilgisayarda olması gerekenler
 ───────────────────────────────────────────
