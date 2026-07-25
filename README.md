@@ -227,7 +227,7 @@ Grup 15
   - **Toplam Backlog Puanı**: **100 SP**
 
   ### **Miro Sprint Board Görünümü:**
-  ![Sprint 3 Board](screenshoots/sprint3.jpg)
+  ![Sprint 3 Board](screenshoots/sprint3.jpeg)
 
 - **Ürün Durumu**: Sprint 3 kapsamında geliştirilen ve kullanıma sunulan çalışan ürün ekran görüntüleri:
 
