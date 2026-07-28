@@ -23,6 +23,10 @@ Grup 15
 
 > **Slogan:** *"Ürününü kullanıcı gözünden test et."*
 
+🌐 **Canlı Uygulama:**
+- **Frontend (Arayüz):** [https://firstclick-frontend.vercel.app/](https://firstclick-frontend.vercel.app/)
+- **Backend (API):** [https://firstclick.onrender.com](https://firstclick.onrender.com)
+
 ---
 
 ## **Ürün Açıklaması**
