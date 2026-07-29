@@ -208,12 +208,13 @@ Grup 15
 
 - **Backlog Düzeni ve Story Seçimleri**: Sprint 3 kapsamında, projenin güvenlik, veritabanı kalıcılığı, döküman bazlı RAG motoru entegrasyonu ve gelişmiş analiz özellikleri tamamlanmıştır. İşler kullanıcı hikayelerine (User Story - Mavi Kartlar) ve bunlara bağlı teknik görevlere (Task - Kırmızı Kartlar) bölünmüş; Miro üzerinde planlanan hedeflere sadık kalınmıştır.
 
-- **Daily Scrum**: Daily Scrum toplantıları Slack ve Whatsapp üzerinden yürütülmüş, ekip üyeleri her gün saat 11:00'e kadar ilerlemelerini ve olası engellerini paylaşmıştır. Ekran görüntüleri aşağıdaki alanlara eklenecektir:
+- **Daily Scrum**: Daily Scrum toplantıları Slack ve Whatsapp üzerinden yürütülmüş, ekip üyeleri her gün saat 11:00'e kadar ilerlemelerini ve olası engellerini paylaşmıştır.
 
   <p align="center">
-    <img src="screenshoots/sp3m1.jpg" width="32%" />
-    <img src="screenshoots/sp3m2.jpg" width="32%" />
-    <img src="screenshoots/sp3m3.jpg" width="32%" />
+    <img src="screenshoots/sp3m1.jpg" width="24%" />
+    <img src="screenshoots/sp3m2.jpg" width="24%" />
+    <img src="screenshoots/sp3m3.jpg" width="24%" />
+    <img src="screenshoots/sp3m4.jpg" width="24%" />
   </p>
 
 - **Sprint Board Update**: Miro panomuzda Sprint 3 hedefleri doğrultusunda kartların son durumu güncellenmiş ve backlog tamamlanmıştır.
