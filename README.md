@@ -369,10 +369,37 @@ sequenceDiagram
 
 ## Kurulum ve Çalıştırma
 
-```bash
-cd firstclick
-make install
-```
+### 🛠️ Ön Gereksinimler
+
+Projeyi yerel bilgisayarınızda kurup çalıştırabilmek için aşağıdaki yazılımların yüklü olması gerekmektedir:
+- **Node.js** (v20 veya üzeri)
+- **Python** (v3.11 veya üzeri)
+- **Docker Desktop** (Yerel Supabase veritabanı konteynerleri için aktif ve çalışır durumda olmalıdır)
+- **Supabase CLI** (Yerel veritabanı orkestrasyonu için)
+
+---
+
+### 🚀 Yerel Kurulum Adımları
+
+1. **Projeyi indirin ve klasöre girin:**
+   ```bash
+   cd FirstClick
+   ```
+
+2. **Supabase Yerel Veritabanını Başlatın:**
+   ```bash
+   supabase start
+   ```
+   > [!NOTE]
+   > `supabase start` komutu yerel Docker konteynerlerini ayağa kaldırır ve `supabase/migrations/` klasöründeki tüm veritabanı şema güncellemelerini (`001_init.sql` dosyasından `007_storage_product_docs.sql` dosyasına kadar olan 7 adet migration'ı) sırayla ve otomatik olarak yerel veritabanına uygular.
+
+   *Canlı ortama (Production) veya manuel kurulum yaparken, `supabase/migrations/` altındaki 7 adet `.sql` dosyasının tamamının veritabanında sırayla çalıştırılması zorunludur.*
+
+3. **Paketleri Kurun:**
+   ```bash
+   make install
+   ```
+   *(Windows kullanıcıları, terminal engellerse `scripts\setup-windows.bat` dosyası ile tek tıkla kurulum gerçekleştirebilirler.)*
 
 ### Backend Ortam Değişkenleri
 `backend/.env` dosyasını oluşturun (`backend/.env.example` referans):
@@ -398,7 +425,6 @@ NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 ```
 
-Supabase SQL migration: `supabase/migrations/001_init.sql`  
 Deploy (Render): [DEPLOY.md](DEPLOY.md)
 
 ### Projeyi Çalıştırma
@@ -425,31 +451,88 @@ backend/
     main.py              # FastAPI uygulaması, CORS
     config.py            # Ortam ayarları
     constants.py         # Persona tanımları
+    auth.py              # Supabase Auth / JWT doğrulama ve kullanıcı işlemleri
+    middleware/          # CORS, Logging, Hata yakalama ara yazılımları
+    security/            # Şifreleme ve güvenlik yardımcıları
+    rag/                 # Retrieval-Augmented Generation (Doküman & Bilgi tabanı işleme)
+      chunking.py        # Metin parçalama algoritmaları
+      embed.py           # Metin vektörleştirme (text-embedding-3-small)
+      ingest.py          # Supabase Vector Store veritabanına veri yükleme
+      knowledge.py       # Global ve dinamik bilgi yönetimi
+      retrieve.py        # Hibrit arama (Vektör + Anahtar kelime + RRF)
+      vision.py          # Ekran görüntüsü ve görsel analiz RAG desteği
+      web_fetch.py       # Web sayfa içeriği çekme ve kazıma
     routers/
-      analyze.py         # POST /api/v1/analyze
+      ab_analyze.py      # A/B analiz testleri router'ı
+      analyses.py        # Geçmiş analizleri listeleme ve yönetme
+      analyze.py         # POST /api/v1/analyze (Ana analiz orkestrasyonu)
+      documents.py       # RAG için doküman yükleme, listeleme ve silme
+      followup.py        # Analiz sonrası çok turlu soru-cevap
       health.py          # GET /health
+      knowledge.py       # Bilgi tabanı API uçları
+      personas.py        # Özel persona ekleme, silme ve listeleme
+      products.py        # Ürün ekleme ve workspace ürün yönetimi
+      public_extras.py   # Paylaşım linkleri ve dışa açık ekstralar
+      tts.py             # TTS (Text-to-Speech) ses sentezleme
+      workspaces.py      # Çalışma alanları ve takım yönetimi
     schemas/
-      analysis.py        # Pydantic modelleri
+      analysis.py        # Pydantic veri doğrulama modelleri (analiz, RAG, auth vb.)
     services/
-      analyze.py         # Analiz orchestrator
-      mock_analyzer.py   # Kişiselleştirilmiş mock
-      openai_analyzer.py # OpenAI entegrasyonu
+      analyze.py         # Analiz orkestratör servisi (paralel çalıştırma)
+      demo_data.py       # Giriş/Demo modunda mock veri üreticisi
+      insights.py        # Sentez ajan analizi ve genel UX önerileri üretimi
+      mock_analyzer.py   # Kişiselleştirilmiş/hızlı mock analiz servisi
+      openai_analyzer.py # OpenAI API (GPT-4o/GPT-4o-mini) entegrasyonu
+      product_queries.py # Ürün sorguları ve filtrelemeleri
+      share_links.py     # Paylaşım linkleri ve JWT imzalama/doğrulama
+      supabase_client.py # Supabase veritabanı ve depolama (Storage) istemcisi
+      workspace_access.py# Workspace erişim ve rol kontrol yetkilendirmesi
   requirements.txt
 ```
 
 ### Frontend Yapısı
 ```text
-app/           # Sayfalar (landing, analyze, results)
-components/    # UI bileşenleri
-lib/api.ts     # Backend API client
-types/         # TypeScript tipleri
+app/                     # Next.js 14 App Router Sayfaları
+  ab/                    # A/B test senaryosu ve karşılaştırma arayüzü
+  analyze/               # Yeni analiz başlatma ve doküman yükleme ekranı
+  auth/                  # E-posta doğrulama ve şifre sıfırlama akışları
+  compare/               # Analiz karşılaştırma laboratuvarı
+  demo/                  # Giriş yapmadan deneme (Demo/Mock) arayüzü
+  forgot-password/       # Şifremi unuttum sayfası
+  history/               # Kullanıcının geçmiş analiz raporları
+  login/                 # Giriş yapma ekranı
+  reset-password/        # Şifre yenileme ekranı
+  results/               # Detaylı analiz raporu ve sesli 3D avatar odası
+  share/                 # Paylaşılan analizleri görüntüleme sayfası
+  signup/                # Kayıt olma ekranı
+  team/                  # Çalışma alanı (Workspace) ve takım yönetim ekranı
+  globals.css            # Tailwind ve tema değişkenleri (Karanlık/Aydınlık mod)
+  layout.tsx             # Ana uygulama düzeni, i18n & Auth context sağlayıcıları
+  page.tsx               # Landing Page (Giriş ve Tanıtım ekranı)
+components/              # UI Bileşenleri
+  analyze/               # Analiz formu, dosya yükleme ve RAG durumu bileşenleri
+  auth/                  # Giriş/Kayıt formları ve yetki korumalı bileşenler
+  compare/               # Yan yana rapor ve A/B analiz kartları
+  landing/               # Tanıtım sayfası, özellik kartları ve kahraman (hero) alanı
+  layout/                # Navbar, Footer ve Tema/Dil seçici bileşenleri
+  presence/              # Canlı 3D avatar odası ve TalkingHead entegrasyonu
+  results/               # Analiz puanları, feedback grafikleri ve chatbot
+  ui/                    # Özelleştirilmiş temel UI elementleri (Button, Input, Dialog vb.)
+lib/                     # Yardımcı Kütüphaneler ve Servis İstemcileri
+  api.ts                 # Backend API istemcisi (Fetch Wrapper)
+  constants.ts           # Sabit değerler ve sistem personaları
+  demo-fixture.ts        # Çevrimdışı demo modu için hazır veriler
+  i18n/                  # Çoklu dil desteği (Türkçe ve İngilizce)
+  pdf.ts                 # Raporları PDF formatına dönüştürme mantığı
+  pdf-fonts.ts           # PDF çıktısında Türkçe karakter desteği için fontlar
+  persona-avatars.ts     # Konuşan 3D avatar görsel ve ses eşleşmeleri
+  persona-packs.ts       # Persona paketleri (temel, profesyonel vb.) şablonları
+  presence/              # Canlı durum (presence) websocket/bağlantı yönetimi
+  supabase/              # Supabase auth ve veritabanı istemcisi (Frontend)
+  utils.ts               # Sınıf birleştirme (clsx) gibi ufak yardımcı fonksiyonlar
+types/                   # TypeScript Tip Tanımlamaları
+  analysis.ts            # Analiz, Persona, Rapor ve Workspace veri tipleri
 ```
 
-## Gelecek Geliştirmeler
-
-- **Vision LLM Ajanları (Multimodal):** Ürün ekran görüntüsü, mockup veya doğrudan Figma tasarımlarını görsel olarak tarayıp analiz edebilecek tasarım ajanlarının entegrasyonu.
-- **Chrome Extension / Widget Desteği:** Kullanıcıların FirstClick panelinden çıkmadan, kendi canlı web siteleri veya prototipleri üzerinde ajanları çalıştırabileceği bir tarayıcı eklentisi.
-- **Gelişmiş Caching & API Limit Kontrolü:** Tekrarlanan analiz adımları için Redis cache katmanı eklenmesi ve kurumsal müşteriler için API kullanım kota/bütçe yönetim paneli.
-- **Detaylı Demografik Veri Entegrasyonu:** Özel personalar oluştururken hedeflenen lokasyon, yaş ve meslek gruplarına uygun hazır davranış profili modellerinin (demographic presets) sisteme dahil edilmesi.
 
 

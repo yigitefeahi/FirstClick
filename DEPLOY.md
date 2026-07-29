@@ -3,7 +3,7 @@
 ## 1) Supabase
 
 1. Create a project at https://supabase.com
-2. SQL Editor → run `supabase/migrations/001_init.sql`
+2. SQL Editor → run all SQL migrations from `supabase/migrations/` in order (from `001_init.sql` to `007_storage_product_docs.sql`)
 3. Storage → New bucket → name: `product-docs` → **Private**
 4. Auth → Providers → Email enabled (confirm email optional for demo)
 5. Copy from Project Settings → API:
