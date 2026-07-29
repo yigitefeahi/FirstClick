@@ -234,7 +234,7 @@ Grup 15
   ### **Miro Sprint Board Görünümü:**
   ![Sprint 3 Board](screenshoots/sprint3.jpeg)
 
-- **Ürün Durumu**: Sprint 3 kapsamında geliştirilen ve kullanıma sunulan çalışan ürün ekran görüntüleri:
+- **Ürün Durumu**: Sprint 3 kapsamında geliştirilen ve kullanıma sunulan çalışan ürün ekran görüntüleri (Ayrıca bu sprint itibarıyla tüm platform genelinde dinamik **Karanlık/Aydınlık Mod** ve **İngilizce Dil Desteği** aktif edilmiştir):
 
   #### 🔍 Yenilenen Giriş ve Tanıtım Ekranı (Landing Page)
   <p align="center">
